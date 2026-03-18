@@ -29,8 +29,10 @@ export function TopBar() {
     const ambientBtn = document.createElement('button');
     ambientBtn.innerHTML = '✨';
     ambientBtn.title = 'Ambient intelligence';
+    ambientBtn.classList.toggle('active', state.ambientEnabled);
     ambientBtn.addEventListener('click', () => {
         state.ambientEnabled = !state.ambientEnabled;
+        ambientBtn.classList.toggle('active', state.ambientEnabled);
     });
     actions.appendChild(ambientBtn);
 

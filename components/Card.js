@@ -114,14 +114,13 @@ export function Card(widget) {
     });
 
     // Subscribe to state changes to update selection class
-    const unsubscribe = state.subscribe(() => {
+    state.subscribe(() => {
         if (state.selectionMode && state.selectedIds.has(widget.id)) {
             card.classList.add('selected');
         } else {
             card.classList.remove('selected');
         }
     });
-    // Store unsubscribe? Not necessary for now.
 
     return card;
 }

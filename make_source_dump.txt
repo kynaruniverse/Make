@@ -1,0 +1,2275 @@
+===== ./README.md =====
+# soft-place-glitch
+A personal digital sanctuary that breathes with you.
+
+===== ./index.html =====
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Maké · personal command center</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0a0c0e">
+</head>
+<body>
+    <div id="app">
+        <!-- TopBar will be injected here -->
+    </div>
+
+    <script type="module" src="core/app.js"></script>
+</body>
+</html>
+
+===== ./styles.css =====
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body {
+    background-color: #0a0c0e;
+    color: #ffffff;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-weight: 300;
+    line-height: 1.5;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+}
+
+#app {
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    max-width: 1400px;
+    margin: 0 auto;
+    width: 100%;
+    border-left: 1px solid #2a2f33;
+    border-right: 1px solid #2a2f33;
+    background: #0f1215;
+}
+
+/* Grid background (faint lines) */
+main {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    background-image: 
+        linear-gradient(#2a2f33 1px, transparent 1px),
+        linear-gradient(90deg, #2a2f33 1px, transparent 1px);
+    background-size: 40px 40px;
+    background-position: center center;
+}
+
+/* Tab bar */
+.top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 16px;
+    border-bottom: 1px solid #2a2f33;
+    background: #0a0c0e;
+}
+
+.tab-container {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.tab-container::-webkit-scrollbar {
+    display: none;
+}
+
+.tab {
+    padding: 8px 16px;
+    border: 1px solid #3a4045;
+    border-radius: 30px;
+    background: transparent;
+    color: #a0a8b0;
+    font-size: 14px;
+    font-weight: 400;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.tab.active {
+    background: #2a2f33;
+    border-color: #5a7d9c;
+    color: white;
+}
+
+.top-bar-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.top-bar-actions button {
+    background: none;
+    border: 1px solid #3a4045;
+    color: #c0c8d0;
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.top-bar-actions button:active {
+    background: #2a2f33;
+}
+
+/* Card grid */
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+}
+
+/* Card */
+.card {
+    background: #14181c;
+    border: 1px solid #2a2f33;
+    border-radius: 20px;
+    padding: 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+    transition: transform 0.1s, border-color 0.1s;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+}
+
+.card:active {
+    transform: scale(0.98);
+    border-color: #5a7d9c;
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    color: #a0a8b0;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.card-title {
+    font-weight: 600;
+    color: white;
+    margin-bottom: 8px;
+    word-break: break-word;
+    font-size: 16px;
+}
+
+.card-content {
+    color: #c0c8d0;
+    font-size: 14px;
+    word-break: break-word;
+    white-space: pre-wrap;
+    flex: 1;
+}
+
+.card-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.card-footer button {
+    background: none;
+    border: none;
+    color: #a0a8b0;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 4px;
+}
+
+/* Command Palette */
+.command-palette {
+    position: fixed;
+    top: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90%;
+    max-width: 600px;
+    background: #1e2328;
+    border: 1px solid #3a4045;
+    border-radius: 24px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.8);
+    z-index: 1000;
+    padding: 12px;
+    display: none;
+}
+
+.command-palette.visible {
+    display: block;
+}
+
+.command-palette input {
+    width: 100%;
+    background: #0a0c0e;
+    border: 1px solid #3a4045;
+    border-radius: 40px;
+    padding: 16px 20px;
+    color: white;
+    font-size: 16px;
+    outline: none;
+}
+
+.command-results {
+    margin-top: 8px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.command-result-item {
+    padding: 12px 16px;
+    border-bottom: 1px solid #2a2f33;
+    cursor: pointer;
+    color: #c0c8d0;
+}
+
+.command-result-item:active {
+    background: #2a2f33;
+}
+
+/* Modal */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.7);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+}
+
+.modal-overlay.visible {
+    display: flex;
+}
+
+.modal {
+    background: #1e2328;
+    border: 1px solid #3a4045;
+    border-radius: 24px;
+    width: 90%;
+    max-width: 500px;
+    padding: 24px;
+}
+
+.modal h3 {
+    font-size: 20px;
+    font-weight: 400;
+    margin-bottom: 16px;
+    color: white;
+}
+
+.modal-content {
+    margin-bottom: 24px;
+}
+
+.modal-content input,
+.modal-content textarea,
+.modal-content select {
+    width: 100%;
+    background: #0a0c0e;
+    border: 1px solid #3a4045;
+    border-radius: 12px;
+    padding: 12px;
+    color: white;
+    font-size: 14px;
+    margin-bottom: 12px;
+    font-family: inherit;
+}
+
+.modal-content textarea {
+    min-height: 100px;
+    resize: vertical;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.modal-actions button {
+    padding: 12px 20px;
+    border: 1px solid #3a4045;
+    background: transparent;
+    color: white;
+    border-radius: 30px;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.modal-actions button:active {
+    background: #2a2f33;
+}
+
+/* Undo toast */
+.undo-toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1e2328;
+    border: 1px solid #5a7d9c;
+    border-radius: 40px;
+    padding: 12px 24px;
+    color: white;
+    font-size: 14px;
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    z-index: 3000;
+    animation: slideUp 0.2s ease;
+}
+
+.undo-toast button {
+    background: none;
+    border: none;
+    color: #5a7d9c;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+@keyframes slideUp {
+    from { transform: translate(-50%, 20px); opacity: 0; }
+    to { transform: translate(-50%, 0); opacity: 1; }
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+    .grid {
+        grid-template-columns: 1fr;
+    }
+    .top-bar {
+        padding: 8px;
+    }
+}
+
+/* Card sizes */
+.card.size-small {
+    width: 200px;
+}
+.card.size-medium {
+    width: 280px;
+}
+.card.size-large {
+    width: 360px;
+}
+
+/* Code block styling */
+.widget-code {
+    background: #1e2328;
+    padding: 8px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-family: 'Fira Code', monospace;
+    font-size: 13px;
+}
+
+/* Link styling */
+.widget-link {
+    color: #5a7d9c;
+    text-decoration: none;
+    word-break: break-all;
+}
+.widget-link:hover {
+    text-decoration: underline;
+}
+
+/* Selection mode indicator */
+.card.selected {
+    border: 2px solid #5a7d9c;
+}
+
+/* Bulk action bar */
+.bulk-bar {
+    position: sticky;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #1e2328;
+    border-top: 1px solid #5a7d9c;
+    padding: 12px 16px;
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    justify-content: center;
+    z-index: 500;
+}
+
+.bulk-bar span {
+    color: white;
+    margin-right: auto;
+}
+
+.bulk-bar button {
+    background: #2a2f33;
+    border: 1px solid #3a4045;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 20px;
+    cursor: pointer;
+}
+
+.bulk-bar button:active {
+    background: #3a4045;
+}
+
+/* Selected card style */
+.card.selected {
+    border: 2px solid #5a7d9c;
+    box-shadow: 0 0 10px rgba(90,125,156,0.3);
+}
+
+/* Empty state */
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: #a0a8b0;
+    font-size: 16px;
+    grid-column: 1 / -1;
+}
+
+.empty-hint {
+    margin-top: 12px;
+    font-size: 14px;
+    color: #5a7d9c;
+}
+
+.empty-command {
+    margin-top: 8px;
+    font-size: 12px;
+    color: #3a4045;
+}
+
+/* Empty state */
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: #a0a8b0;
+    font-size: 16px;
+    grid-column: 1 / -1;
+}
+
+.empty-hint {
+    margin-top: 12px;
+    font-size: 14px;
+    color: #5a7d9c;
+}
+
+.empty-command {
+    margin-top: 8px;
+    font-size: 12px;
+    color: #3a4045;
+}
+
+/* Card polish */
+.card {
+    transition: transform 0.1s ease, border-color 0.1s ease, box-shadow 0.2s ease;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+.card:hover {
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    border-color: #5a7d9c;
+}
+
+/* Selection mode card */
+.card.selected {
+    border: 2px solid #5a7d9c;
+    box-shadow: 0 0 15px rgba(90,125,156,0.5);
+}
+
+/* Bulk bar animation */
+.bulk-bar {
+    animation: slideUp 0.2s ease;
+}
+
+/* Command palette fade */
+.command-palette {
+    transition: opacity 0.1s ease;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.command-palette.visible {
+    opacity: 1;
+    pointer-events: all;
+}
+
+/* Modal overlay fade */
+.modal-overlay {
+    transition: opacity 0.15s ease;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.modal-overlay.visible {
+    opacity: 1;
+    pointer-events: all;
+}
+
+===== ./app.js =====
+// ==================== Core App State ====================
+const STORE_NAME = 'widgets';
+const DB_NAME = 'SoftPlace2035';
+const DB_VERSION = 1;
+
+let db;
+let currentTab = 'notes';
+let widgets = [];
+let smartEnabled = false;
+
+// DOM elements
+const appEl = document.getElementById('app');
+const tabBar = document.getElementById('tab-bar');
+const tabContent = document.getElementById('tab-content');
+const cmdButton = document.getElementById('cmd-button');
+const cmdPalette = document.getElementById('command-palette');
+const cmdInput = document.getElementById('command-input');
+const cmdResults = document.getElementById('command-results');
+const smartToggle = document.getElementById('smart-toggle');
+const modalOverlay = document.getElementById('modal-overlay');
+const modalTitle = document.getElementById('modal-title');
+const modalContent = document.getElementById('modal-content');
+const modalCancel = document.getElementById('modal-cancel');
+const modalOk = document.getElementById('modal-ok');
+
+// ==================== IndexedDB Initialization ====================
+function initDB() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => {
+            db = request.result;
+            resolve();
+        };
+        request.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains(STORE_NAME)) {
+                db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
+            }
+        };
+    });
+}
+
+// ==================== Widget CRUD ====================
+async function loadWidgets() {
+    return new Promise((resolve) => {
+        const tx = db.transaction(STORE_NAME, 'readonly');
+        const store = tx.objectStore(STORE_NAME);
+        const request = store.getAll();
+        request.onsuccess = () => {
+            widgets = request.result || [];
+            resolve(widgets);
+        };
+    });
+}
+
+async function saveWidget(widget) {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+    if (widget.id) {
+        store.put(widget);
+    } else {
+        store.add(widget);
+    }
+    await loadWidgets();
+    render();
+}
+
+async function deleteWidget(id) {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+    store.delete(id);
+    await loadWidgets();
+    render();
+}
+
+// ==================== Render Tabs and Widgets ====================
+const tabs = [
+    { id: 'notes', label: 'Notes', icon: '📝' },
+    { id: 'code', label: 'Code', icon: '</>' },
+    { id: 'links', label: 'Links', icon: '🔗' },
+    { id: 'stickies', label: 'Sticky', icon: '📌' }
+];
+
+function renderTabs() {
+    tabBar.innerHTML = '';
+    tabs.forEach(tab => {
+        const btn = document.createElement('button');
+        btn.className = `tab ${currentTab === tab.id ? 'active' : ''}`;
+        btn.dataset.tab = tab.id;
+        btn.textContent = `${tab.icon} ${tab.label}`;
+        btn.addEventListener('click', () => {
+            currentTab = tab.id;
+            renderTabs();
+            render();
+        });
+        tabBar.appendChild(btn);
+    });
+}
+
+function render() {
+    const filtered = widgets.filter(w => w.type === currentTab.slice(0, -1) || (currentTab === 'stickies' && w.type === 'sticky'));
+    // Apply smart sorting if enabled
+    let sorted = filtered;
+    if (smartEnabled) {
+        sorted = smartSort(filtered);
+    }
+    tabContent.innerHTML = `<div class="widget-grid">${
+        sorted.map(w => renderWidgetCard(w)).join('')
+    }</div>`;
+}
+
+function renderWidgetCard(w) {
+    let contentHtml = '';
+    switch (w.type) {
+        case 'note':
+            contentHtml = `<div class="widget-content">${escapeHTML(w.content.substring(0, 200))}${w.content.length > 200 ? '…' : ''}</div>`;
+            break;
+        case 'code':
+            contentHtml = `<pre class="widget-code"><code>${escapeHTML(w.code.substring(0, 150))}${w.code.length > 150 ? '…' : ''}</code></pre>`;
+            break;
+        case 'link':
+            contentHtml = `<a href="${escapeHTML(w.url)}" target="_blank" class="widget-link">${escapeHTML(w.title || w.url)}</a>`;
+            break;
+        case 'sticky':
+            contentHtml = `<div class="widget-content" style="background:${w.color || '#2a2f33'}; padding:12px; border-radius:12px;">${escapeHTML(w.text)}</div>`;
+            break;
+    }
+    return `
+        <div class="widget-card" data-id="${w.id}" data-type="${w.type}">
+            <div class="widget-header">
+                <span>${w.type}</span>
+                <span>${new Date(w.created || Date.now()).toLocaleDateString()}</span>
+            </div>
+            <div class="widget-title">${escapeHTML(w.title || 'Untitled')}</div>
+            ${contentHtml}
+            <div class="widget-footer">
+                <button class="edit-widget" data-id="${w.id}">✎</button>
+                <button class="delete-widget" data-id="${w.id}">✕</button>
+            </div>
+        </div>
+    `;
+}
+
+function escapeHTML(str) {
+    return String(str).replace(/[&<>"]/g, function(m) {
+        if (m === '&') return '&amp;';
+        if (m === '<') return '&lt;';
+        if (m === '>') return '&gt;';
+        if (m === '"') return '&quot;';
+        return m;
+    });
+}
+
+// ==================== Smart Sorting ====================
+function smartSort(widgets) {
+    const hour = new Date().getHours();
+    // Morning (5-11): notes first, then stickies
+    // Afternoon (12-17): links first
+    // Evening (18-4): code first
+    if (hour >= 5 && hour < 12) {
+        return widgets.sort((a,b) => {
+            if (a.type === 'note') return -1;
+            if (b.type === 'note') return 1;
+            if (a.type === 'sticky') return -1;
+            if (b.type === 'sticky') return 1;
+            return 0;
+        });
+    } else if (hour >= 12 && hour < 18) {
+        return widgets.sort((a,b) => {
+            if (a.type === 'link') return -1;
+            if (b.type === 'link') return 1;
+            return 0;
+        });
+    } else {
+        return widgets.sort((a,b) => {
+            if (a.type === 'code') return -1;
+            if (b.type === 'code') return 1;
+            return 0;
+        });
+    }
+}
+
+// ==================== Command Palette ====================
+cmdButton.addEventListener('click', toggleCommandPalette);
+cmdInput.addEventListener('input', handleCommandInput);
+cmdInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') hideCommandPalette();
+    if (e.key === 'Enter') executeCommand(cmdInput.value);
+});
+
+function toggleCommandPalette() {
+    cmdPalette.classList.toggle('hidden');
+    if (!cmdPalette.classList.contains('hidden')) {
+        cmdInput.focus();
+    }
+}
+
+function hideCommandPalette() {
+    cmdPalette.classList.add('hidden');
+    cmdInput.value = '';
+    cmdResults.innerHTML = '';
+}
+
+function handleCommandInput() {
+    const text = cmdInput.value.trim();
+    if (!text) {
+        cmdResults.innerHTML = '';
+        return;
+    }
+    // Show suggestions
+    const suggestions = [];
+    if (text.startsWith('note ')) {
+        suggestions.push({ text: `Create note: "${text.slice(5)}"`, action: () => createNote(text.slice(5)) });
+    } else if (text.startsWith('code ')) {
+        suggestions.push({ text: `Create code snippet: "${text.slice(5)}"`, action: () => createCode(text.slice(5)) });
+    } else if (text.startsWith('link ')) {
+        suggestions.push({ text: `Create link: "${text.slice(5)}"`, action: () => createLink(text.slice(5)) });
+    } else if (text.startsWith('sticky ')) {
+        suggestions.push({ text: `Create sticky: "${text.slice(7)}"`, action: () => createSticky(text.slice(7)) });
+    } else {
+        // Search existing
+        widgets.forEach(w => {
+            if (w.title && w.title.toLowerCase().includes(text.toLowerCase())) {
+                suggestions.push({ text: `📄 ${w.title} (${w.type})`, action: () => openWidget(w.id) });
+            }
+        });
+    }
+    cmdResults.innerHTML = suggestions.map(s => `<div class="command-result-item">${escapeHTML(s.text)}</div>`).join('');
+    Array.from(document.querySelectorAll('.command-result-item')).forEach((el, i) => {
+        el.addEventListener('click', suggestions[i].action);
+    });
+}
+
+function executeCommand(text) {
+    handleCommandInput(); // triggers suggestions; we'll just pick first if any
+    const first = document.querySelector('.command-result-item');
+    if (first) first.click();
+    hideCommandPalette();
+}
+
+// Command actions
+function createNote(title) {
+    showModal('New Note', `
+        <input id="modal-note-title" placeholder="Title" value="${escapeHTML(title)}">
+        <textarea id="modal-note-content" placeholder="Note content"></textarea>
+    `, async () => {
+        const t = document.getElementById('modal-note-title').value;
+        const c = document.getElementById('modal-note-content').value;
+        if (t || c) {
+            await saveWidget({ type: 'note', title: t, content: c, created: Date.now() });
+        }
+    });
+}
+
+function createCode(title) {
+    showModal('New Code', `
+        <input id="modal-code-title" placeholder="Title" value="${escapeHTML(title)}">
+        <textarea id="modal-code-content" placeholder="Code"></textarea>
+        <select id="modal-code-lang">
+            <option>javascript</option><option>python</option><option>html</option><option>css</option>
+        </select>
+    `, async () => {
+        const t = document.getElementById('modal-code-title').value;
+        const c = document.getElementById('modal-code-content').value;
+        const l = document.getElementById('modal-code-lang').value;
+        await saveWidget({ type: 'code', title: t, code: c, language: l, created: Date.now() });
+    });
+}
+
+function createLink(url) {
+    showModal('New Link', `
+        <input id="modal-link-url" placeholder="URL" value="${escapeHTML(url)}">
+        <input id="modal-link-title" placeholder="Title (optional)">
+    `, async () => {
+        const u = document.getElementById('modal-link-url').value;
+        const t = document.getElementById('modal-link-title').value;
+        if (u) {
+            await saveWidget({ type: 'link', url: u, title: t, created: Date.now() });
+        }
+    });
+}
+
+function createSticky(text) {
+    showModal('New Sticky', `
+        <textarea id="modal-sticky-text" placeholder="Sticky note">${escapeHTML(text)}</textarea>
+        <input id="modal-sticky-color" type="color" value="#2a5f3a">
+    `, async () => {
+        const txt = document.getElementById('modal-sticky-text').value;
+        const col = document.getElementById('modal-sticky-color').value;
+        if (txt) {
+            await saveWidget({ type: 'sticky', text: txt, color: col, created: Date.now() });
+        }
+    });
+}
+
+function openWidget(id) {
+    // Switch to appropriate tab and scroll to widget
+    const widget = widgets.find(w => w.id === id);
+    if (widget) {
+        currentTab = widget.type + 's'; // notes, code, links, stickies
+        renderTabs();
+        render();
+        // Scroll into view after render
+        setTimeout(() => {
+            const el = document.querySelector(`.widget-card[data-id="${id}"]`);
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 100);
+    }
+}
+
+// ==================== Modal ====================
+function showModal(title, contentHtml, onOK) {
+    modalTitle.textContent = title;
+    modalContent.innerHTML = contentHtml;
+    modalOverlay.classList.remove('hidden');
+    modalOk.onclick = () => {
+        onOK();
+        modalOverlay.classList.add('hidden');
+    };
+    modalCancel.onclick = () => modalOverlay.classList.add('hidden');
+}
+
+// ==================== Ambient Intelligence Toggle ====================
+smartToggle.addEventListener('click', () => {
+    smartEnabled = !smartEnabled;
+    smartToggle.classList.toggle('active', smartEnabled);
+    render();
+});
+
+// ==================== Edit/Delete Widgets ====================
+tabContent.addEventListener('click', async (e) => {
+    const target = e.target.closest('button');
+    if (!target) return;
+    const widgetId = Number(target.dataset.id);
+    if (!widgetId) return;
+    const widget = widgets.find(w => w.id === widgetId);
+    if (!widget) return;
+
+    if (target.classList.contains('delete-widget')) {
+        if (confirm('Delete this widget?')) {
+            await deleteWidget(widgetId);
+        }
+    } else if (target.classList.contains('edit-widget')) {
+        editWidget(widget);
+    }
+});
+
+function editWidget(w) {
+    if (w.type === 'note') {
+        showModal('Edit Note', `
+            <input id="modal-note-title" value="${escapeHTML(w.title || '')}">
+            <textarea id="modal-note-content">${escapeHTML(w.content || '')}</textarea>
+        `, async () => {
+            w.title = document.getElementById('modal-note-title').value;
+            w.content = document.getElementById('modal-note-content').value;
+            await saveWidget(w);
+        });
+    } else if (w.type === 'code') {
+        showModal('Edit Code', `
+            <input id="modal-code-title" value="${escapeHTML(w.title || '')}">
+            <textarea id="modal-code-content">${escapeHTML(w.code || '')}</textarea>
+            <select id="modal-code-lang">
+                <option ${w.language==='javascript'?'selected':''}>javascript</option>
+                <option ${w.language==='python'?'selected':''}>python</option>
+                <option ${w.language==='html'?'selected':''}>html</option>
+                <option ${w.language==='css'?'selected':''}>css</option>
+            </select>
+        `, async () => {
+            w.title = document.getElementById('modal-code-title').value;
+            w.code = document.getElementById('modal-code-content').value;
+            w.language = document.getElementById('modal-code-lang').value;
+            await saveWidget(w);
+        });
+    } else if (w.type === 'link') {
+        showModal('Edit Link', `
+            <input id="modal-link-url" value="${escapeHTML(w.url || '')}">
+            <input id="modal-link-title" value="${escapeHTML(w.title || '')}">
+        `, async () => {
+            w.url = document.getElementById('modal-link-url').value;
+            w.title = document.getElementById('modal-link-title').value;
+            await saveWidget(w);
+        });
+    } else if (w.type === 'sticky') {
+        showModal('Edit Sticky', `
+            <textarea id="modal-sticky-text">${escapeHTML(w.text || '')}</textarea>
+            <input id="modal-sticky-color" type="color" value="${escapeHTML(w.color || '#2a5f3a')}">
+        `, async () => {
+            w.text = document.getElementById('modal-sticky-text').value;
+            w.color = document.getElementById('modal-sticky-color').value;
+            await saveWidget(w);
+        });
+    }
+}
+
+// ==================== Export/Import ====================
+function exportData() {
+    const data = JSON.stringify(widgets, null, 2);
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `softplace-backup-${new Date().toISOString().slice(0,10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+function importData(file) {
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        try {
+            const imported = JSON.parse(e.target.result);
+            // Clear existing and add all
+            const tx = db.transaction(STORE_NAME, 'readwrite');
+            const store = tx.objectStore(STORE_NAME);
+            await store.clear();
+            for (let w of imported) {
+                delete w.id; // let autoincrement assign new ids
+                store.add(w);
+            }
+            await loadWidgets();
+            render();
+            alert('Import successful');
+        } catch (err) {
+            alert('Invalid backup file');
+        }
+    };
+    reader.readAsText(file);
+}
+
+// ==================== GitHub Gist Sync (Stub) ====================
+async function syncWithGist() {
+    // This would require GitHub token. For now, just a placeholder.
+    alert('GitHub Gist sync not implemented yet. You can manually export/import.');
+}
+
+// ==================== Settings Modal (with export/import) ====================
+cmdButton.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    showSettings();
+});
+
+function showSettings() {
+    showModal('Settings', `
+        <div class="settings-group">
+            <button id="export-btn">Export Backup</button>
+            <button id="import-btn">Import Backup</button>
+        </div>
+        <div class="github-sync">
+            <button id="gist-sync">Sync with GitHub Gist (beta)</button>
+        </div>
+    `, () => {});
+    // Attach listeners after modal opens
+    document.getElementById('export-btn').addEventListener('click', () => {
+        exportData();
+        modalOverlay.classList.add('hidden');
+    });
+    document.getElementById('import-btn').addEventListener('click', () => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json';
+        input.onchange = (e) => {
+            importData(e.target.files[0]);
+            modalOverlay.classList.add('hidden');
+        };
+        input.click();
+    });
+    document.getElementById('gist-sync').addEventListener('click', () => {
+        syncWithGist();
+        modalOverlay.classList.add('hidden');
+    });
+}
+
+// ==================== Initialize ====================
+window.onload = async () => {
+    await initDB();
+    await loadWidgets();
+    renderTabs();
+    render();
+
+    // Service worker
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/service-worker.js');
+    }
+};
+
+===== ./manifest.json =====
+{
+    "name": "Maké · personal command center",
+    "short_name": "Maké",
+    "description": "A modular workspace for notes, code, links, and sticky notes.",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#0a0c0e",
+    "theme_color": "#0a0c0e",
+    "orientation": "portrait",
+    "icons": [
+        {
+            "src": "/icons/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/icons/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ]
+}
+
+===== ./service-worker.js =====
+const CACHE = 'make-v1';
+const urlsToCache = [
+    './',
+    './index.html',
+    './styles.css',
+    './manifest.json',
+    './core/app.js',
+    './core/state.js',
+    './core/storage.js',
+    './core/commandParser.js',
+    './core/gridEngine.js',
+    './components/Card.js',
+    './components/Grid.js',
+    './components/CommandPalette.js',
+    './components/Modal.js',
+    './components/TopBar.js',
+    './icons/icon-192.png',
+    './icons/icon-512.png'
+];
+
+self.addEventListener('install', e => {
+    e.waitUntil(
+        caches.open(CACHE).then(cache => cache.addAll(urlsToCache))
+    );
+});
+
+self.addEventListener('fetch', e => {
+    e.respondWith(
+        caches.match(e.request).then(res => res || fetch(e.request))
+    );
+});
+
+===== ./.github/workflows/deploy.yml =====
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Deploy to GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: .
+          branch: gh-pages
+
+===== ./core/app.js =====
+import { state, loadInitialData } from './state.js';
+import { TopBar } from '../components/TopBar.js';
+import { Grid } from '../components/Grid.js';
+import { CommandPalette } from '../components/CommandPalette.js';
+import { Modal } from '../components/Modal.js';
+import { BulkBar } from '../components/BulkBar.js';
+import './storage.js'; // initializes DB
+
+// Global app container
+const app = document.getElementById('app');
+
+// Initialize UI
+async function init() {
+    await loadInitialData();
+
+    // Render top bar
+    const topBar = TopBar();
+    app.appendChild(topBar);
+
+    // Container for bulk bar (dynamic)
+    const bulkContainer = document.createElement('div');
+    bulkContainer.id = 'bulk-container';
+    app.appendChild(bulkContainer);
+
+    // Create main container for grid
+    const main = document.createElement('main');
+    main.id = 'main-content';
+    app.appendChild(main);
+
+    // Render grid
+    Grid.render(main);
+
+    // Initialize command palette
+    CommandPalette.init();
+
+    // Initialize modal
+    Modal.init();
+
+    // Listen for selection mode changes
+    state.subscribe(() => {
+        const container = document.getElementById('bulk-container');
+        if (state.selectionMode) {
+            if (!container.querySelector('.bulk-bar')) {
+                container.appendChild(BulkBar());
+            }
+        } else {
+            container.innerHTML = ''; // remove bulk bar
+        }
+    });
+
+    // Global keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+        // Cmd+K or Ctrl+K to open palette
+        if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+            e.preventDefault();
+            CommandPalette.toggle();
+        }
+        // Escape to close palette or exit selection mode
+        if (e.key === 'Escape') {
+            if (document.getElementById('command-palette')?.classList.contains('visible')) {
+                CommandPalette.hide();
+            }
+            if (state.selectionMode) {
+                state.clearSelection();
+            }
+        }
+    });
+}
+
+init();
+
+===== ./core/state.js =====
+// Simple pub/sub state with localStorage persistence for ambient
+export const state = {
+    _data: {
+        widgets: [],
+        currentTab: 'notes',
+        ambientEnabled: localStorage.getItem('ambientEnabled') === 'true',
+        selectionMode: false,
+        selectedIds: new Set()
+    },
+    _listeners: [],
+
+    get widgets() { return this._data.widgets; },
+    set widgets(val) { this._data.widgets = val; this._notify(); },
+
+    get currentTab() { return this._data.currentTab; },
+    set currentTab(val) { this._data.currentTab = val; this._notify(); },
+
+    get ambientEnabled() { return this._data.ambientEnabled; },
+    set ambientEnabled(val) {
+        this._data.ambientEnabled = val;
+        localStorage.setItem('ambientEnabled', val);
+        this._notify();
+    },
+
+    get selectionMode() { return this._data.selectionMode; },
+    set selectionMode(val) { this._data.selectionMode = val; this._notify(); },
+
+    get selectedIds() { return this._data.selectedIds; },
+    set selectedIds(val) { this._data.selectedIds = val; this._notify(); },
+
+    toggleSelection(id) {
+        if (this.selectedIds.has(id)) {
+            this.selectedIds.delete(id);
+        } else {
+            this.selectedIds.add(id);
+        }
+        this._notify();
+    },
+
+    clearSelection() {
+        this.selectedIds.clear();
+        this.selectionMode = false;
+        this._notify();
+    },
+
+    subscribe(callback) {
+        this._listeners.push(callback);
+    },
+    _notify() {
+        this._listeners.forEach(fn => fn());
+    }
+};
+
+import { getAllWidgets } from './storage.js';
+export async function loadInitialData() {
+    state.widgets = await getAllWidgets() || [];
+}
+
+===== ./core/storage.js =====
+const DB_NAME = 'MakeDB';
+const STORE_NAME = 'widgets';
+const DB_VERSION = 1;
+
+let db;
+
+export function initDB() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => {
+            db = request.result;
+            resolve();
+        };
+        request.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains(STORE_NAME)) {
+                const store = db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
+                store.createIndex('type', 'type');
+                store.createIndex('createdAt', 'createdAt');
+            }
+        };
+    });
+}
+
+export async function getAllWidgets() {
+    return new Promise((resolve) => {
+        const tx = db.transaction(STORE_NAME, 'readonly');
+        const store = tx.objectStore(STORE_NAME);
+        const request = store.getAll();
+        request.onsuccess = () => resolve(request.result);
+    });
+}
+
+export async function saveWidget(widget) {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+    if (widget.id) {
+        store.put(widget);
+    } else {
+        widget.createdAt = Date.now();
+        store.add(widget);
+    }
+    return new Promise((resolve) => {
+        tx.oncomplete = () => resolve();
+    });
+}
+
+export async function deleteWidget(id) {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+    store.delete(id);
+    return new Promise((resolve) => {
+        tx.oncomplete = () => resolve();
+    });
+}
+
+export async function clearAll() {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+    store.clear();
+    return new Promise((resolve) => {
+        tx.oncomplete = () => resolve();
+    });
+}
+
+// Initialize DB on module load
+initDB().catch(console.error);
+
+===== ./core/commandParser.js =====
+import { state } from './state.js';
+import { saveWidget } from './storage.js';
+import { showModal } from '../components/Modal.js';
+
+// Simple fuzzy match (returns true if all chars of query appear in order in text)
+function fuzzyMatch(query, text) {
+    if (!query || !text) return false;
+    query = query.toLowerCase();
+    text = text.toLowerCase();
+    let i = 0, j = 0;
+    while (i < query.length && j < text.length) {
+        if (query[i] === text[j]) i++;
+        j++;
+    }
+    return i === query.length;
+}
+
+export function parseCommand(input) {
+    input = input.trim();
+    if (!input) return;
+
+    const parts = input.split(' ');
+    const cmd = parts[0].toLowerCase();
+    const rest = parts.slice(1).join(' ');
+
+    switch (cmd) {
+        case 'note':
+            createNote(rest);
+            break;
+        case 'code':
+            createCode(rest);
+            break;
+        case 'link':
+            createLink(rest);
+            break;
+        case 'sticky':
+            createSticky(rest);
+            break;
+        default:
+            search(input);
+    }
+}
+
+function createNote(title) {
+    showModal('New Note', `
+        <input id="modal-note-title" placeholder="Title" value="${escapeHTML(title)}">
+        <textarea id="modal-note-content" placeholder="Note content (Markdown supported)"></textarea>
+    `, async () => {
+        const t = document.getElementById('modal-note-title').value;
+        const c = document.getElementById('modal-note-content').value;
+        if (t || c) {
+            const widget = { 
+                type: 'note', 
+                title: t, 
+                content: c, 
+                size: 'medium',
+                createdAt: Date.now() 
+            };
+            await saveWidget(widget);
+            state.widgets = await (await import('./storage.js')).getAllWidgets();
+        }
+    });
+}
+
+function createCode(title) {
+    showModal('New Code', `
+        <input id="modal-code-title" placeholder="Title" value="${escapeHTML(title)}">
+        <textarea id="modal-code-content" placeholder="Paste your code here"></textarea>
+        <select id="modal-code-lang">
+            <option value="javascript">JavaScript</option>
+            <option value="python">Python</option>
+            <option value="html">HTML</option>
+            <option value="css">CSS</option>
+            <option value="other">Other</option>
+        </select>
+    `, async () => {
+        const t = document.getElementById('modal-code-title').value;
+        const c = document.getElementById('modal-code-content').value;
+        const l = document.getElementById('modal-code-lang').value;
+        if (t || c) {
+            const widget = { 
+                type: 'code', 
+                title: t, 
+                code: c, 
+                language: l,
+                size: 'medium',
+                createdAt: Date.now() 
+            };
+            await saveWidget(widget);
+            state.widgets = await (await import('./storage.js')).getAllWidgets();
+        }
+    });
+}
+
+function createLink(url) {
+    showModal('New Link', `
+        <input id="modal-link-url" placeholder="URL (e.g. https://...)" value="${escapeHTML(url)}">
+        <input id="modal-link-title" placeholder="Title (optional)">
+        <div id="link-preview" style="margin-top:8px; font-size:12px; color:#a0a8b0;"></div>
+    `, async () => {
+        const u = document.getElementById('modal-link-url').value;
+        let t = document.getElementById('modal-link-title').value;
+        if (!u) return;
+        if (!t) {
+            t = await fetchTitle(u);
+        }
+        const widget = { 
+            type: 'link', 
+            url: u, 
+            title: t, 
+            size: 'medium',
+            createdAt: Date.now() 
+        };
+        await saveWidget(widget);
+        state.widgets = await (await import('./storage.js')).getAllWidgets();
+    });
+
+    const urlInput = document.getElementById('modal-link-url');
+    urlInput.addEventListener('input', async () => {
+        const preview = document.getElementById('link-preview');
+        const val = urlInput.value.trim();
+        if (val) {
+            preview.innerHTML = '⏳ Fetching...';
+            const title = await fetchTitle(val);
+            preview.innerHTML = title ? `🖼️ ${title}` : '🔗 No preview available';
+        } else {
+            preview.innerHTML = '';
+        }
+    });
+}
+
+async function fetchTitle(url) {
+    try {
+        const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+        const res = await fetch(proxy);
+        const data = await res.json();
+        const html = data.contents;
+        const match = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+        return match ? match[1] : url;
+    } catch {
+        return url;
+    }
+}
+
+function createSticky(text) {
+    showModal('New Sticky', `
+        <textarea id="modal-sticky-text" placeholder="Sticky note">${escapeHTML(text)}</textarea>
+        <input id="modal-sticky-color" type="color" value="#2a5f3a">
+        <div style="margin-top:8px; background:#14181c; padding:8px; border-radius:8px;" id="sticky-preview">Preview</div>
+    `, async () => {
+        const txt = document.getElementById('modal-sticky-text').value;
+        const col = document.getElementById('modal-sticky-color').value;
+        if (txt) {
+            const widget = { 
+                type: 'sticky', 
+                text: txt, 
+                color: col, 
+                size: 'medium',
+                createdAt: Date.now() 
+            };
+            await saveWidget(widget);
+            state.widgets = await (await import('./storage.js')).getAllWidgets();
+        }
+    });
+
+    const colorInput = document.getElementById('modal-sticky-color');
+    const preview = document.getElementById('sticky-preview');
+    colorInput.addEventListener('input', () => {
+        preview.style.backgroundColor = colorInput.value;
+    });
+}
+
+function search(query) {
+    const results = state.widgets.filter(w => {
+        const searchable = [
+            w.title,
+            w.content,
+            w.code,
+            w.url,
+            w.text
+        ].filter(Boolean).join(' ').toLowerCase();
+        return fuzzyMatch(query, searchable);
+    });
+    import('../components/CommandPalette.js').then(m => m.showSearchResults(results));
+}
+
+function escapeHTML(str) {
+    if (!str) return '';
+    return String(str).replace(/[&<>"]/g, function(m) {
+        return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[m];
+    });
+}
+
+===== ./core/gridEngine.js =====
+import { state } from './state.js';
+
+export function getSortedWidgets() {
+    let widgets = [...state.widgets];
+    // Filter by current tab
+    const tab = state.currentTab;
+    widgets = widgets.filter(w => {
+        if (tab === 'notes') return w.type === 'note';
+        if (tab === 'code') return w.type === 'code';
+        if (tab === 'links') return w.type === 'link';
+        if (tab === 'sticky') return w.type === 'sticky';
+        return true;
+    });
+
+    // Ambient sorting
+    if (state.ambientEnabled) {
+        const hour = new Date().getHours();
+        if (hour >= 5 && hour < 12) {
+            // Morning: notes first
+            widgets.sort((a,b) => {
+                if (a.type === 'note' && b.type !== 'note') return -1;
+                if (b.type === 'note' && a.type !== 'note') return 1;
+                return 0;
+            });
+        } else if (hour >= 12 && hour < 18) {
+            // Afternoon: links first
+            widgets.sort((a,b) => {
+                if (a.type === 'link' && b.type !== 'link') return -1;
+                if (b.type === 'link' && a.type !== 'link') return 1;
+                return 0;
+            });
+        } else {
+            // Evening: code first
+            widgets.sort((a,b) => {
+                if (a.type === 'code' && b.type !== 'code') return -1;
+                if (b.type === 'code' && a.type !== 'code') return 1;
+                return 0;
+            });
+        }
+    }
+
+    return widgets;
+}
+
+===== ./components/TopBar.js =====
+import { state } from '../core/state.js';
+import { CommandPalette } from './CommandPalette.js';
+import { showSettings } from './Modal.js';
+
+export function TopBar() {
+    const bar = document.createElement('div');
+    bar.className = 'top-bar';
+
+    // Tabs
+    const tabContainer = document.createElement('div');
+    tabContainer.className = 'tab-container';
+    const tabs = ['notes', 'code', 'links', 'sticky'];
+    tabs.forEach(tab => {
+        const btn = document.createElement('button');
+        btn.className = `tab ${state.currentTab === tab ? 'active' : ''}`;
+        btn.textContent = tab.charAt(0).toUpperCase() + tab.slice(1);
+        btn.addEventListener('click', () => {
+            state.currentTab = tab;
+        });
+        tabContainer.appendChild(btn);
+    });
+    bar.appendChild(tabContainer);
+
+    // Actions
+    const actions = document.createElement('div');
+    actions.className = 'top-bar-actions';
+
+    // Ambient toggle
+    const ambientBtn = document.createElement('button');
+    ambientBtn.innerHTML = '✨';
+    ambientBtn.title = 'Ambient intelligence';
+    ambientBtn.addEventListener('click', () => {
+        state.ambientEnabled = !state.ambientEnabled;
+    });
+    actions.appendChild(ambientBtn);
+
+    // Settings (opens modal)
+    const settingsBtn = document.createElement('button');
+    settingsBtn.innerHTML = '⚙';
+    settingsBtn.addEventListener('click', () => showSettings());
+    actions.appendChild(settingsBtn);
+
+    // Command palette button
+    const cmdBtn = document.createElement('button');
+    cmdBtn.innerHTML = '⌘';
+    cmdBtn.addEventListener('click', () => CommandPalette.toggle());
+    actions.appendChild(cmdBtn);
+
+    bar.appendChild(actions);
+    return bar;
+}
+
+===== ./components/Grid.js =====
+import { state } from '../core/state.js';
+import { getSortedWidgets } from '../core/gridEngine.js';
+import { Card } from './Card.js';
+
+export const Grid = {
+    container: null,
+
+    render(parent) {
+        if (!this.container) {
+            this.container = document.createElement('div');
+            this.container.className = 'grid';
+            parent.appendChild(this.container);
+        }
+        this.refresh();
+    },
+
+    refresh() {
+        if (!this.container) return;
+        const widgets = getSortedWidgets();
+        if (widgets.length === 0) {
+            this.showEmptyState();
+        } else {
+            this.container.innerHTML = '';
+            widgets.forEach(w => {
+                const card = Card(w);
+                this.container.appendChild(card);
+            });
+        }
+    },
+
+    showEmptyState() {
+        const tab = state.currentTab;
+        let message = '';
+        let example = '';
+        switch (tab) {
+            case 'notes':
+                message = 'No notes yet.';
+                example = 'Type `note Buy milk` to create one.';
+                break;
+            case 'code':
+                message = 'No code snippets.';
+                example = 'Type `code fetch API` to add a snippet.';
+                break;
+            case 'links':
+                message = 'No links saved.';
+                example = 'Type `link https://example.com` to save a link.';
+                break;
+            case 'sticky':
+                message = 'No sticky notes.';
+                example = 'Type `sticky Remember this` to create a sticky.';
+                break;
+        }
+        this.container.innerHTML = `
+            <div class="empty-state">
+                <p>${message}</p>
+                <p class="empty-hint">${example}</p>
+                <p class="empty-command">⌘ to open command palette</p>
+            </div>
+        `;
+    }
+};
+
+===== ./components/Card.js =====
+import { state } from '../core/state.js';
+import { deleteWidget } from '../core/storage.js';
+import { showModal } from './Modal.js';
+import { showUndo } from './UndoToast.js';
+
+export function Card(widget) {
+    const card = document.createElement('div');
+    card.className = `card size-${widget.size || 'medium'}`;
+    card.dataset.id = widget.id;
+    card.dataset.type = widget.type;
+
+    // Selection indicator (visual)
+    if (state.selectionMode && state.selectedIds.has(widget.id)) {
+        card.classList.add('selected');
+    }
+
+    // Header
+    const header = document.createElement('div');
+    header.className = 'card-header';
+    header.innerHTML = `<span>${widget.type}</span><span>${new Date(widget.createdAt).toLocaleDateString()}</span>`;
+    card.appendChild(header);
+
+    // Title
+    if (widget.title) {
+        const title = document.createElement('div');
+        title.className = 'card-title';
+        title.textContent = widget.title;
+        card.appendChild(title);
+    }
+
+    // Content preview
+    const content = document.createElement('div');
+    content.className = 'card-content';
+    renderContent(content, widget);
+    card.appendChild(content);
+
+    // Footer actions
+    const footer = document.createElement('div');
+    footer.className = 'card-footer';
+
+    // Size toggles (S/M/L)
+    ['S','M','L'].forEach(sz => {
+        const btn = document.createElement('button');
+        btn.textContent = sz;
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            widget.size = sz.toLowerCase();
+            card.className = `card size-${widget.size}`;
+            import('../core/storage.js').then(({ saveWidget }) => saveWidget(widget));
+        });
+        footer.appendChild(btn);
+    });
+
+    // Edit button
+    const editBtn = document.createElement('button');
+    editBtn.innerHTML = '✎';
+    editBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (state.selectionMode) {
+            // In selection mode, edit is disabled or behaves differently?
+            // We'll just toggle selection for now
+            state.toggleSelection(widget.id);
+        } else {
+            editWidget(widget);
+        }
+    });
+    footer.appendChild(editBtn);
+
+    // Delete button
+    const delBtn = document.createElement('button');
+    delBtn.innerHTML = '✕';
+    delBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        if (state.selectionMode) {
+            state.toggleSelection(widget.id);
+        } else {
+            await deleteWidget(widget.id);
+            showUndo('Widget deleted', async () => {
+                await (await import('../core/storage.js')).saveWidget(widget);
+                state.widgets = await (await import('../core/storage.js')).getAllWidgets();
+            });
+            state.widgets = await (await import('../core/storage.js')).getAllWidgets();
+        }
+    });
+    footer.appendChild(delBtn);
+
+    card.appendChild(footer);
+
+    // Long press for selection mode
+    let pressTimer;
+    card.addEventListener('touchstart', (e) => {
+        pressTimer = setTimeout(() => {
+            state.selectionMode = true;
+            state.toggleSelection(widget.id);
+        }, 500);
+    });
+    card.addEventListener('touchend', () => clearTimeout(pressTimer));
+    card.addEventListener('touchmove', () => clearTimeout(pressTimer));
+
+    // Regular click: if in selection mode, toggle; otherwise maybe open modal?
+    card.addEventListener('click', (e) => {
+        if (state.selectionMode) {
+            e.preventDefault();
+            state.toggleSelection(widget.id);
+        }
+        // else, do nothing (or could open modal)
+    });
+
+    // Double-click for edit (always works)
+    card.addEventListener('dblclick', () => {
+        if (!state.selectionMode) {
+            editWidget(widget);
+        }
+    });
+
+    // Subscribe to state changes to update selection class
+    const unsubscribe = state.subscribe(() => {
+        if (state.selectionMode && state.selectedIds.has(widget.id)) {
+            card.classList.add('selected');
+        } else {
+            card.classList.remove('selected');
+        }
+    });
+    // Store unsubscribe? Not necessary for now.
+
+    return card;
+}
+
+function renderContent(container, widget) {
+    if (widget.type === 'code') {
+        const pre = document.createElement('pre');
+        pre.className = 'widget-code';
+        const code = document.createElement('code');
+        code.textContent = widget.code?.substring(0, 150) + (widget.code?.length > 150 ? '…' : '');
+        pre.appendChild(code);
+        container.appendChild(pre);
+        // Add copy button inside content for convenience
+        const copyBtn = document.createElement('button');
+        copyBtn.textContent = '📋';
+        copyBtn.style.marginTop = '8px';
+        copyBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            navigator.clipboard.writeText(widget.code || '');
+            copyBtn.textContent = '✅';
+            setTimeout(() => copyBtn.textContent = '📋', 1000);
+        });
+        container.appendChild(copyBtn);
+    } else if (widget.type === 'link') {
+        const a = document.createElement('a');
+        a.href = widget.url;
+        a.target = '_blank';
+        a.className = 'widget-link';
+        a.textContent = widget.title || widget.url;
+        container.appendChild(a);
+    } else if (widget.type === 'sticky') {
+        container.style.backgroundColor = widget.color || '#2a2f33';
+        container.style.padding = '12px';
+        container.style.borderRadius = '12px';
+        container.textContent = widget.text?.substring(0, 100) + (widget.text?.length > 100 ? '…' : '');
+    } else {
+        // Note
+        container.textContent = widget.content?.substring(0, 100) + (widget.content?.length > 100 ? '…' : '');
+    }
+}
+
+function editWidget(widget) {
+    import('./Modal.js').then(m => m.Modal.showEditModal(widget));
+}
+
+===== ./components/CommandPalette.js =====
+import { parseCommand } from '../core/commandParser.js';
+
+let palette, input, results;
+let history = [];
+let historyIndex = -1;
+
+export const CommandPalette = {
+    init() {
+        palette = document.createElement('div');
+        palette.className = 'command-palette';
+        palette.id = 'command-palette';
+        palette.innerHTML = `
+            <input type="text" id="command-input" placeholder="Type a command...">
+            <div id="command-results" class="command-results"></div>
+        `;
+        document.body.appendChild(palette);
+
+        input = document.getElementById('command-input');
+        results = document.getElementById('command-results');
+
+        input.addEventListener('input', () => this.handleInput());
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') this.hide();
+            if (e.key === 'Enter') this.execute();
+            // History navigation
+            if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (history.length > 0) {
+                    historyIndex = (historyIndex + 1) % history.length;
+                    input.value = history[historyIndex];
+                }
+            }
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (history.length > 0) {
+                    historyIndex = (historyIndex - 1 + history.length) % history.length;
+                    input.value = history[historyIndex];
+                } else {
+                    input.value = '';
+                }
+            }
+        });
+
+        // Hide on click outside
+        document.addEventListener('click', (e) => {
+            if (!palette.contains(e.target) && e.target.id !== 'cmd-button') {
+                this.hide();
+            }
+        });
+    },
+
+    toggle() {
+        if (palette.classList.contains('visible')) {
+            this.hide();
+        } else {
+            this.show();
+        }
+    },
+
+    show() {
+        palette.classList.add('visible');
+        input.focus();
+        input.value = '';
+        results.innerHTML = '';
+        historyIndex = -1;
+    },
+
+    hide() {
+        palette.classList.remove('visible');
+    },
+
+    handleInput() {
+        const text = input.value.trim();
+        if (!text) {
+            results.innerHTML = '';
+            return;
+        }
+        const suggestions = [];
+        if (text.startsWith('note ')) {
+            suggestions.push(`note ${text.slice(5)}`);
+        } else if (text.startsWith('code ')) {
+            suggestions.push(`code ${text.slice(5)}`);
+        } else if (text.startsWith('link ')) {
+            suggestions.push(`link ${text.slice(5)}`);
+        } else if (text.startsWith('sticky ')) {
+            suggestions.push(`sticky ${text.slice(7)}`);
+        } else {
+            import('../core/state.js').then(({ state }) => {
+                const matches = state.widgets.filter(w => 
+                    (w.title && w.title.toLowerCase().includes(text.toLowerCase())) ||
+                    (w.content && w.content.toLowerCase().includes(text.toLowerCase()))
+                );
+                this.displayResults(matches.map(w => `📄 ${w.title || w.content?.substring(0,30)} (${w.type})`));
+            });
+            return;
+        }
+        this.displayResults(suggestions);
+    },
+
+    displayResults(items) {
+        results.innerHTML = items.map(item => `<div class="command-result-item">${escapeHTML(item)}</div>`).join('');
+        Array.from(results.children).forEach((el, i) => {
+            el.addEventListener('click', () => {
+                input.value = items[i];
+                this.execute();
+            });
+        });
+    },
+
+    execute() {
+        const cmd = input.value.trim();
+        if (cmd) {
+            history.unshift(cmd);
+            if (history.length > 20) history.pop();
+            parseCommand(cmd);
+        }
+        this.hide();
+    },
+
+    showSearchResults(resultsArray) {
+        this.show();
+        results.innerHTML = resultsArray.map(w => 
+            `<div class="command-result-item">📄 ${w.title || w.content?.substring(0,30) || w.url} (${w.type})</div>`
+        ).join('');
+    }
+};
+
+function escapeHTML(str) {
+    if (!str) return '';
+    return String(str).replace(/[&<>"]/g, function(m) {
+        return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[m];
+    });
+}
+
+===== ./components/Modal.js =====
+let overlay, modal, titleEl, contentEl, okBtn, cancelBtn;
+let currentOnOk = null;
+
+export const Modal = {
+    init() {
+        overlay = document.createElement('div');
+        overlay.className = 'modal-overlay';
+        overlay.id = 'modal-overlay';
+        overlay.innerHTML = `
+            <div class="modal">
+                <h3 id="modal-title"></h3>
+                <div id="modal-content" class="modal-content"></div>
+                <div class="modal-actions">
+                    <button id="modal-cancel">Cancel</button>
+                    <button id="modal-ok">OK</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+
+        modal = overlay.querySelector('.modal');
+        titleEl = document.getElementById('modal-title');
+        contentEl = document.getElementById('modal-content');
+        okBtn = document.getElementById('modal-ok');
+        cancelBtn = document.getElementById('modal-cancel');
+
+        cancelBtn.addEventListener('click', () => this.hide());
+        okBtn.addEventListener('click', () => {
+            if (currentOnOk) currentOnOk();
+            this.hide();
+        });
+    },
+
+    show(title, contentHtml, onOk) {
+        titleEl.textContent = title;
+        contentEl.innerHTML = contentHtml;
+        currentOnOk = onOk;
+        overlay.classList.add('visible');
+    },
+
+    hide() {
+        overlay.classList.remove('visible');
+        currentOnOk = null;
+    },
+
+    showEditModal(widget) {
+        let html = '';
+        if (widget.type === 'note') {
+            html = `
+                <input id="modal-note-title" value="${escapeHTML(widget.title || '')}" placeholder="Title">
+                <textarea id="modal-note-content" placeholder="Note">${escapeHTML(widget.content || '')}</textarea>
+            `;
+        } else if (widget.type === 'code') {
+            html = `
+                <input id="modal-code-title" value="${escapeHTML(widget.title || '')}" placeholder="Title">
+                <textarea id="modal-code-content" placeholder="Code">${escapeHTML(widget.code || '')}</textarea>
+                <select id="modal-code-lang">
+                    <option ${widget.language==='javascript'?'selected':''}>javascript</option>
+                    <option ${widget.language==='python'?'selected':''}>python</option>
+                    <option ${widget.language==='html'?'selected':''}>html</option>
+                    <option ${widget.language==='css'?'selected':''}>css</option>
+                </select>
+            `;
+        } else if (widget.type === 'link') {
+            html = `
+                <input id="modal-link-url" value="${escapeHTML(widget.url || '')}" placeholder="URL">
+                <input id="modal-link-title" value="${escapeHTML(widget.title || '')}" placeholder="Title (optional)">
+            `;
+        } else if (widget.type === 'sticky') {
+            html = `
+                <textarea id="modal-sticky-text" placeholder="Sticky note">${escapeHTML(widget.text || '')}</textarea>
+                <input id="modal-sticky-color" type="color" value="${escapeHTML(widget.color || '#2a5f3a')}">
+            `;
+        }
+        this.show(`Edit ${widget.type}`, html, async () => {
+            if (widget.type === 'note') {
+                widget.title = document.getElementById('modal-note-title').value;
+                widget.content = document.getElementById('modal-note-content').value;
+            } else if (widget.type === 'code') {
+                widget.title = document.getElementById('modal-code-title').value;
+                widget.code = document.getElementById('modal-code-content').value;
+                widget.language = document.getElementById('modal-code-lang').value;
+            } else if (widget.type === 'link') {
+                widget.url = document.getElementById('modal-link-url').value;
+                widget.title = document.getElementById('modal-link-title').value;
+            } else if (widget.type === 'sticky') {
+                widget.text = document.getElementById('modal-sticky-text').value;
+                widget.color = document.getElementById('modal-sticky-color').value;
+            }
+            const { saveWidget } = await import('../core/storage.js');
+            await saveWidget(widget);
+            const { state } = await import('../core/state.js');
+            state.widgets = await (await import('../core/storage.js')).getAllWidgets();
+        });
+    }
+};
+
+export function showModal(title, contentHtml, onOk) {
+    Modal.show(title, contentHtml, onOk);
+}
+
+export function showSettings() {
+    const token = localStorage.getItem('github_token') || '';
+    Modal.show('Settings', `
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <button id="export-btn">Export Backup</button>
+            <button id="import-btn">Import Backup</button>
+        </div>
+        <div class="github-sync" style="margin-top:16px; border-top:1px solid #2a2f33; padding-top:16px;">
+            <h4 style="margin-bottom:8px;">GitHub Gist Sync</h4>
+            <input type="password" id="github-token" placeholder="Personal Access Token" value="${escapeHTML(token)}">
+            <button id="save-token">Save Token</button>
+            <button id="sync-gist">Sync to Gist</button>
+            <div id="gist-status" style="margin-top:8px; font-size:12px;"></div>
+        </div>
+    `, () => {});
+
+    setTimeout(() => {
+        document.getElementById('export-btn')?.addEventListener('click', () => {
+            import('../core/storage.js').then(({ getAllWidgets }) => {
+                getAllWidgets().then(widgets => {
+                    const data = JSON.stringify(widgets, null, 2);
+                    const blob = new Blob([data], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `make-backup-${new Date().toISOString().slice(0,10)}.json`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    Modal.hide();
+                });
+            });
+        });
+        document.getElementById('import-btn')?.addEventListener('click', () => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = (e) => {
+                const file = e.target.files[0];
+                const reader = new FileReader();
+                reader.onload = async (ev) => {
+                    const imported = JSON.parse(ev.target.result);
+                    const { clearAll, saveWidget } = await import('../core/storage.js');
+                    await clearAll();
+                    for (let w of imported) {
+                        delete w.id;
+                        await saveWidget(w);
+                    }
+                    const { state } = await import('../core/state.js');
+                    state.widgets = await (await import('../core/storage.js')).getAllWidgets();
+                    Modal.hide();
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        });
+
+        // GitHub token save
+        const tokenInput = document.getElementById('github-token');
+        document.getElementById('save-token')?.addEventListener('click', () => {
+            localStorage.setItem('github_token', tokenInput.value);
+            document.getElementById('gist-status').textContent = 'Token saved locally.';
+        });
+
+        document.getElementById('sync-gist')?.addEventListener('click', async () => {
+            const token = localStorage.getItem('github_token');
+            if (!token) {
+                document.getElementById('gist-status').textContent = 'Please save a token first.';
+                return;
+            }
+            const status = document.getElementById('gist-status');
+            status.textContent = 'Syncing...';
+            try {
+                const { getAllWidgets } = await import('../core/storage.js');
+                const widgets = await getAllWidgets();
+                const gistData = {
+                    description: 'Maké backup',
+                    public: false,
+                    files: {
+                        'make-backup.json': {
+                            content: JSON.stringify(widgets, null, 2)
+                        }
+                    }
+                };
+                const res = await fetch('https://api.github.com/gists', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `token ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(gistData)
+                });
+                if (!res.ok) throw new Error('GitHub API error');
+                const data = await res.json();
+                status.innerHTML = `✅ Synced! <a href="${data.html_url}" target="_blank">View Gist</a>`;
+            } catch (err) {
+                status.textContent = `❌ Sync failed: ${err.message}`;
+            }
+        });
+    }, 100);
+}
+
+function escapeHTML(str) {
+    if (!str) return '';
+    return String(str).replace(/[&<>"]/g, function(m) {
+        return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[m];
+    });
+}
+
+===== ./components/UndoToast.js =====
+let toastTimeout;
+
+export function showUndo(message, onUndo) {
+    const existing = document.querySelector('.undo-toast');
+    if (existing) existing.remove();
+
+    const toast = document.createElement('div');
+    toast.className = 'undo-toast';
+    toast.innerHTML = `
+        <span>${message}</span>
+        <button id="undo-btn">Undo</button>
+    `;
+    document.body.appendChild(toast);
+
+    document.getElementById('undo-btn').addEventListener('click', () => {
+        onUndo();
+        toast.remove();
+        if (toastTimeout) clearTimeout(toastTimeout);
+    });
+
+    toastTimeout = setTimeout(() => {
+        toast.remove();
+    }, 5000);
+}
+
+===== ./components/BulkBar.js =====
+import { state } from '../core/state.js';
+import { deleteWidget } from '../core/storage.js';
+import { showUndo } from './UndoToast.js';
+
+export function BulkBar() {
+    const bar = document.createElement('div');
+    bar.className = 'bulk-bar';
+    bar.id = 'bulk-bar';
+
+    const countSpan = document.createElement('span');
+    countSpan.id = 'selected-count';
+    countSpan.textContent = '0 selected';
+
+    const deleteBtn = document.createElement('button');
+    deleteBtn.textContent = 'Delete';
+    deleteBtn.addEventListener('click', async () => {
+        const ids = Array.from(state.selectedIds);
+        if (ids.length === 0) return;
+        // Store widgets for potential undo
+        const deletedWidgets = ids.map(id => state.widgets.find(w => w.id === id)).filter(Boolean);
+        // Delete each
+        for (let id of ids) {
+            await deleteWidget(id);
+        }
+        showUndo(`Deleted ${ids.length} item(s)`, async () => {
+            // Undo: re-save each
+            for (let w of deletedWidgets) {
+                await (await import('../core/storage.js')).saveWidget(w);
+            }
+            state.widgets = await (await import('../core/storage.js')).getAllWidgets();
+        });
+        state.clearSelection();
+        state.widgets = await (await import('../core/storage.js')).getAllWidgets();
+    });
+
+    const exportBtn = document.createElement('button');
+    exportBtn.textContent = 'Export selected';
+    exportBtn.addEventListener('click', () => {
+        const selected = state.widgets.filter(w => state.selectedIds.has(w.id));
+        const data = JSON.stringify(selected, null, 2);
+        const blob = new Blob([data], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `make-selected-${new Date().toISOString().slice(0,10)}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        // Optionally clear selection
+        state.clearSelection();
+    });
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.addEventListener('click', () => {
+        state.clearSelection();
+    });
+
+    bar.appendChild(countSpan);
+    bar.appendChild(deleteBtn);
+    bar.appendChild(exportBtn);
+    bar.appendChild(cancelBtn);
+
+    // Update count when selection changes
+    const updateCount = () => {
+        countSpan.textContent = `${state.selectedIds.size} selected`;
+    };
+    state.subscribe(updateCount);
+
+    return bar;
+}
+
+===== ./make_source_dump.txt =====
+

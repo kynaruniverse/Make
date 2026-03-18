@@ -26,14 +26,14 @@ export const CommandPalette = {
             if (e.key === 'ArrowUp') {
                 e.preventDefault();
                 if (history.length > 0) {
-                    historyIndex = (historyIndex + 1) % history.length;
+                    historyIndex = (historyIndex - 1 + history.length) % history.length;
                     input.value = history[historyIndex];
                 }
             }
             if (e.key === 'ArrowDown') {
                 e.preventDefault();
                 if (history.length > 0) {
-                    historyIndex = (historyIndex - 1 + history.length) % history.length;
+                    historyIndex = (historyIndex + 1) % history.length;
                     input.value = history[historyIndex];
                 } else {
                     input.value = '';
