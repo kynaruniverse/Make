@@ -1,19 +1,10 @@
-const CACHE = 'make-v1';
+const CACHE = 'make-v2';
 const urlsToCache = [
     './',
     './index.html',
     './styles.css',
+    './app.js',
     './manifest.json',
-    './core/app.js',
-    './core/state.js',
-    './core/storage.js',
-    './core/commandParser.js',
-    './core/gridEngine.js',
-    './components/Card.js',
-    './components/Grid.js',
-    './components/CommandPalette.js',
-    './components/Modal.js',
-    './components/TopBar.js',
     './icons/icon-192.png',
     './icons/icon-512.png'
 ];
