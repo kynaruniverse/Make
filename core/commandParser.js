@@ -2,6 +2,19 @@ import { state } from './state.js';
 import { saveWidget } from './storage.js';
 import { showModal } from '../components/Modal.js';
 
+// Simple fuzzy match (returns true if all chars of query appear in order in text)
+function fuzzyMatch(query, text) {
+    if (!query || !text) return false;
+    query = query.toLowerCase();
+    text = text.toLowerCase();
+    let i = 0, j = 0;
+    while (i < query.length && j < text.length) {
+        if (query[i] === text[j]) i++;
+        j++;
+    }
+    return i === query.length;
+}
+
 export function parseCommand(input) {
     input = input.trim();
     if (!input) return;
@@ -88,7 +101,6 @@ function createLink(url) {
         const u = document.getElementById('modal-link-url').value;
         let t = document.getElementById('modal-link-title').value;
         if (!u) return;
-        // Auto‑fetch if title empty
         if (!t) {
             t = await fetchTitle(u);
         }
@@ -103,7 +115,6 @@ function createLink(url) {
         state.widgets = await (await import('./storage.js')).getAllWidgets();
     });
 
-    // Live preview while typing (simple)
     const urlInput = document.getElementById('modal-link-url');
     urlInput.addEventListener('input', async () => {
         const preview = document.getElementById('link-preview');
@@ -152,7 +163,6 @@ function createSticky(text) {
         }
     });
 
-    // Live color preview
     const colorInput = document.getElementById('modal-sticky-color');
     const preview = document.getElementById('sticky-preview');
     colorInput.addEventListener('input', () => {
@@ -161,7 +171,6 @@ function createSticky(text) {
 }
 
 function search(query) {
-    // Simple search: title and content/code/url
     const results = state.widgets.filter(w => {
         const searchable = [
             w.title,
@@ -170,7 +179,7 @@ function search(query) {
             w.url,
             w.text
         ].filter(Boolean).join(' ').toLowerCase();
-        return searchable.includes(query.toLowerCase());
+        return fuzzyMatch(query, searchable);
     });
     import('../components/CommandPalette.js').then(m => m.showSearchResults(results));
 }

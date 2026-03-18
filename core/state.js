@@ -1,9 +1,9 @@
-// Simple pub/sub state
+// Simple pub/sub state with localStorage persistence for ambient
 export const state = {
     _data: {
         widgets: [],
         currentTab: 'notes',
-        ambientEnabled: false,
+        ambientEnabled: localStorage.getItem('ambientEnabled') === 'true',
         selectionMode: false,
         selectedIds: new Set()
     },
@@ -16,7 +16,11 @@ export const state = {
     set currentTab(val) { this._data.currentTab = val; this._notify(); },
 
     get ambientEnabled() { return this._data.ambientEnabled; },
-    set ambientEnabled(val) { this._data.ambientEnabled = val; this._notify(); },
+    set ambientEnabled(val) {
+        this._data.ambientEnabled = val;
+        localStorage.setItem('ambientEnabled', val);
+        this._notify();
+    },
 
     get selectionMode() { return this._data.selectionMode; },
     set selectionMode(val) { this._data.selectionMode = val; this._notify(); },
@@ -24,14 +28,13 @@ export const state = {
     get selectedIds() { return this._data.selectedIds; },
     set selectedIds(val) { this._data.selectedIds = val; this._notify(); },
 
-    // Helper methods
     toggleSelection(id) {
         if (this.selectedIds.has(id)) {
             this.selectedIds.delete(id);
         } else {
             this.selectedIds.add(id);
         }
-        this._notify(); // trigger re-render of cards
+        this._notify();
     },
 
     clearSelection() {
@@ -48,7 +51,6 @@ export const state = {
     }
 };
 
-// Load initial data from storage
 import { getAllWidgets } from './storage.js';
 export async function loadInitialData() {
     state.widgets = await getAllWidgets() || [];

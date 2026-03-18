@@ -47,6 +47,24 @@ async function init() {
             container.innerHTML = ''; // remove bulk bar
         }
     });
+
+    // Global keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+        // Cmd+K or Ctrl+K to open palette
+        if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+            e.preventDefault();
+            CommandPalette.toggle();
+        }
+        // Escape to close palette or exit selection mode
+        if (e.key === 'Escape') {
+            if (document.getElementById('command-palette')?.classList.contains('visible')) {
+                CommandPalette.hide();
+            }
+            if (state.selectionMode) {
+                state.clearSelection();
+            }
+        }
+    });
 }
 
 init();
