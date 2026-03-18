@@ -4,19 +4,23 @@ import { makeDraggable } from './utils/drag.js';
 import { makeResizable } from './utils/resize.js';
 
 const app = document.getElementById('app');
-
-// Store cleanup functions
 const dragCleanups = new Map();
 const resizeCleanups = new Map();
 
+// Show loading
+const loadingEl = document.createElement('div');
+loadingEl.className = 'loading';
+loadingEl.textContent = 'Loading Maké...';
+app.appendChild(loadingEl);
+
+let ambientInterval;
+
 async function init() {
     await loadInitialData();
+    loadingEl.remove();
     render();
-    
-    // Subscribe to state changes
-    state.subscribe(() => {
-        render();
-    });
+    state.subscribe(() => render());
+    initAmbientIntelligence();
 }
 
 function render() {
@@ -36,23 +40,19 @@ function render() {
         </div>
         
         <div class="canvas">
-            <!-- Background grid layer -->
             <div class="grid-layer" id="grid-layer">
                 <div class="grid" id="grid-container">
                     ${renderBackgroundItems()}
                 </div>
             </div>
             
-            <!-- Floating sticky layer -->
             <div class="sticky-layer" id="sticky-layer">
                 ${renderStickyItems()}
             </div>
         </div>
         
-        <!-- Floating action button -->
         <button class="fab" id="fab">+</button>
         
-        <!-- Add menu -->
         <div class="add-menu ${state.showAddMenu ? '' : 'hidden'}" id="add-menu">
             <button data-type="note">📝 Add Note</button>
             <button data-type="code"></> Add Code</button>
@@ -60,7 +60,6 @@ function render() {
             <button data-type="sticky">📌 Add Sticky</button>
         </div>
         
-        <!-- Settings modal (hidden by default) -->
         <div class="modal-overlay hidden" id="settings-modal">
             <div class="modal">
                 <h3>Settings</h3>
@@ -77,6 +76,7 @@ function render() {
     
     attachEventListeners();
     initializeStickyDragAndResize();
+    checkEmptyState();
 }
 
 function renderBackgroundItems() {
@@ -116,25 +116,43 @@ function renderStickyItems() {
     `).join('');
 }
 
+function checkEmptyState() {
+    const gridContainer = document.getElementById('grid-container');
+    if (!gridContainer) return;
+    
+    const filtered = state.backgroundItems.filter(item => {
+        if (state.currentTab === 'notes') return item.type === 'note';
+        if (state.currentTab === 'code') return item.type === 'code';
+        if (state.currentTab === 'links') return item.type === 'link';
+        return false;
+    });
+    
+    if (filtered.length === 0) {
+        gridContainer.innerHTML = `
+            <div class="empty-state">
+                <p>No ${state.currentTab} yet</p>
+                <p class="empty-hint">Click + to add a ${state.currentTab === 'notes' ? 'note' : state.currentTab === 'code' ? 'code snippet' : 'link'}</p>
+            </div>
+        `;
+    }
+}
+
 function attachEventListeners() {
-    // Tab switching
     document.querySelectorAll('.tab').forEach(btn => {
         btn.addEventListener('click', () => {
             state.currentTab = btn.dataset.tab;
         });
     });
     
-    // FAB
     document.getElementById('fab').addEventListener('click', () => {
         state.showAddMenu = !state.showAddMenu;
     });
     
-    // Add menu buttons
     document.querySelectorAll('.add-menu button').forEach(btn => {
         btn.addEventListener('click', async (e) => {
             const type = e.target.dataset.type;
             if (type === 'sticky') {
-                await createSticky();
+                showStickyModal();
             } else {
                 showCreateModal(type);
             }
@@ -142,7 +160,6 @@ function attachEventListeners() {
         });
     });
     
-    // Background card clicks
     document.querySelectorAll('.card').forEach(card => {
         card.addEventListener('click', (e) => {
             const id = parseInt(card.dataset.id);
@@ -151,7 +168,6 @@ function attachEventListeners() {
         });
     });
     
-    // Sticky delete buttons
     document.querySelectorAll('.delete-sticky').forEach(btn => {
         btn.addEventListener('click', async (e) => {
             e.stopPropagation();
@@ -162,7 +178,6 @@ function attachEventListeners() {
         });
     });
     
-    // Sticky textarea changes
     document.querySelectorAll('.sticky-note textarea').forEach(textarea => {
         textarea.addEventListener('input', async (e) => {
             const id = parseInt(textarea.dataset.id);
@@ -174,45 +189,32 @@ function attachEventListeners() {
         });
     });
     
-    // Settings button
     document.getElementById('settings-btn').addEventListener('click', () => {
         document.getElementById('settings-modal').classList.remove('hidden');
     });
     
-    // Close settings
     document.getElementById('close-settings')?.addEventListener('click', () => {
         document.getElementById('settings-modal').classList.add('hidden');
     });
     
-    // Export
     document.getElementById('export-btn')?.addEventListener('click', exportData);
-    
-    // Import
     document.getElementById('import-btn')?.addEventListener('click', importData);
 }
 
 function initializeStickyDragAndResize() {
-    // Clean up old handlers
     dragCleanups.forEach(cleanup => cleanup());
     resizeCleanups.forEach(cleanup => cleanup());
     dragCleanups.clear();
     resizeCleanups.clear();
     
-    // Set up new handlers
     document.querySelectorAll('.sticky-note').forEach(sticky => {
         const id = parseInt(sticky.dataset.id);
         
-        // Drag
         const dragCleanup = makeDraggable(
             sticky,
-            (left, top) => {
-                // Live update not saved until drag end
-            },
-            () => {
-                // Drag start
-            },
+            null,
+            null,
             async (left, top) => {
-                // Drag end - save position
                 await updateItemPosition(id, {
                     x: left,
                     y: top,
@@ -223,15 +225,11 @@ function initializeStickyDragAndResize() {
         );
         dragCleanups.set(id, dragCleanup);
         
-        // Resize
         const resizeCleanup = makeResizable(
             sticky,
-            (width, height) => {
-                // Live resize
-            },
-            () => {},
+            null,
+            null,
             async (width, height) => {
-                // Resize end - save dimensions
                 await updateItemPosition(id, {
                     x: parseFloat(sticky.style.left),
                     y: parseFloat(sticky.style.top),
@@ -244,37 +242,155 @@ function initializeStickyDragAndResize() {
     });
 }
 
-async function createSticky() {
-    const newSticky = {
-        layer: 'sticky',
-        type: 'sticky',
-        text: 'New sticky note',
-        color: '#ffeb96',
-        position: {
-            x: 100 + Math.random() * 50,
-            y: 100 + Math.random() * 50,
-            width: 200,
-            height: 150
-        },
-        createdAt: Date.now()
-    };
-    await saveItem(newSticky);
-    await loadInitialData();
+function initAmbientIntelligence() {
+    const ambientBtn = document.getElementById('ambient-toggle');
+    if (!ambientBtn) return;
+    
+    ambientBtn.addEventListener('click', () => {
+        state.ambientEnabled = !state.ambientEnabled;
+        ambientBtn.classList.toggle('active', state.ambientEnabled);
+        
+        if (state.ambientEnabled) {
+            startAmbientSorting();
+        } else {
+            clearInterval(ambientInterval);
+        }
+    });
+    
+    if (state.ambientEnabled) {
+        startAmbientSorting();
+    }
+}
+
+function startAmbientSorting() {
+    sortBackgroundByTime();
+    ambientInterval = setInterval(sortBackgroundByTime, 3600000);
+}
+
+function sortBackgroundByTime() {
+    const hour = new Date().getHours();
+    let sorted = [...state.backgroundItems];
+    
+    if (hour >= 5 && hour < 12) {
+        sorted.sort((a, b) => {
+            if (a.type === 'note' && b.type !== 'note') return -1;
+            if (b.type === 'note' && a.type !== 'note') return 1;
+            return 0;
+        });
+    } else if (hour >= 12 && hour < 18) {
+        sorted.sort((a, b) => {
+            if (a.type === 'link' && b.type !== 'link') return -1;
+            if (b.type === 'link' && a.type !== 'link') return 1;
+            return 0;
+        });
+    } else {
+        sorted.sort((a, b) => {
+            if (a.type === 'code' && b.type !== 'code') return -1;
+            if (b.type === 'code' && a.type !== 'code') return 1;
+            return 0;
+        });
+    }
+    
+    state.backgroundItems = sorted;
+}
+
+function showStickyModal() {
+    const colors = ['#ffeb96', '#ffb5a0', '#a0d6ff', '#c0e0a0', '#e0c0ff'];
+    const randomColor = colors[Math.floor(Math.random() * colors.length)];
+    
+    const modalHtml = `
+        <div class="modal-overlay" id="sticky-modal">
+            <div class="modal">
+                <h3>New Sticky Note</h3>
+                <div class="modal-content">
+                    <textarea id="sticky-text" placeholder="Write something..." rows="4"></textarea>
+                    <div style="display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap;">
+                        ${colors.map(color => `
+                            <div style="width: 40px; height: 40px; border-radius: 20px; background: ${color}; cursor: pointer; border: 2px solid ${color === randomColor ? 'white' : 'transparent'};" 
+                                 class="color-option" data-color="${color}"></div>
+                        `).join('')}
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button id="sticky-cancel">Cancel</button>
+                    <button id="sticky-save" class="primary">Save</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    let selectedColor = randomColor;
+    
+    document.querySelectorAll('.color-option').forEach(option => {
+        option.addEventListener('click', () => {
+            document.querySelectorAll('.color-option').forEach(opt => 
+                opt.style.border = '2px solid transparent');
+            option.style.border = '2px solid white';
+            selectedColor = option.dataset.color;
+        });
+    });
+    
+    document.getElementById('sticky-cancel').addEventListener('click', () => {
+        document.getElementById('sticky-modal').remove();
+    });
+    
+    document.getElementById('sticky-save').addEventListener('click', async () => {
+        const text = document.getElementById('sticky-text')?.value || 'New sticky note';
+        
+        const newSticky = {
+            layer: 'sticky',
+            type: 'sticky',
+            text: text,
+            color: selectedColor,
+            position: {
+                x: 100 + Math.random() * 100,
+                y: 100 + Math.random() * 100,
+                width: 220,
+                height: 160
+            },
+            createdAt: Date.now()
+        };
+        
+        await saveItem(newSticky);
+        await loadInitialData();
+        document.getElementById('sticky-modal').remove();
+    });
 }
 
 function showCreateModal(type) {
+    let contentHtml = '';
+    
+    if (type === 'note') {
+        contentHtml = `
+            <input id="modal-title" placeholder="Title">
+            <textarea id="modal-content" placeholder="Content" rows="6"></textarea>
+        `;
+    } else if (type === 'code') {
+        contentHtml = `
+            <input id="modal-title" placeholder="Title">
+            <textarea id="modal-code" placeholder="Code" rows="8"></textarea>
+            <select id="modal-lang">
+                <option value="javascript">JavaScript</option>
+                <option value="python">Python</option>
+                <option value="html">HTML</option>
+                <option value="css">CSS</option>
+            </select>
+        `;
+    } else if (type === 'link') {
+        contentHtml = `
+            <input id="modal-url" placeholder="URL (https://...)">
+            <input id="modal-title" placeholder="Title (optional)">
+        `;
+    }
+    
     const modalHtml = `
         <div class="modal-overlay" id="create-modal">
             <div class="modal">
                 <h3>New ${type}</h3>
                 <div class="modal-content">
-                    <input id="modal-title" placeholder="Title">
-                    ${type === 'code' ? 
-                        '<textarea id="modal-code" placeholder="Code"></textarea><select id="modal-lang"><option>javascript</option><option>python</option></select>' :
-                        type === 'link' ?
-                        '<input id="modal-url" placeholder="URL">' :
-                        '<textarea id="modal-content" placeholder="Content"></textarea>'
-                    }
+                    ${contentHtml}
                 </div>
                 <div class="modal-actions">
                     <button id="modal-cancel">Cancel</button>
@@ -291,22 +407,25 @@ function showCreateModal(type) {
     });
     
     document.getElementById('modal-save').addEventListener('click', async () => {
-        const title = document.getElementById('modal-title')?.value;
-        const content = document.getElementById('modal-content')?.value ||
-                       document.getElementById('modal-code')?.value ||
-                       document.getElementById('modal-url')?.value;
+        const newItem = {
+            layer: 'background',
+            type,
+            createdAt: Date.now()
+        };
         
-        if (title || content) {
-            const newItem = {
-                layer: 'background',
-                type,
-                title,
-                content,
-                code: document.getElementById('modal-code')?.value,
-                language: document.getElementById('modal-lang')?.value,
-                url: document.getElementById('modal-url')?.value,
-                createdAt: Date.now()
-            };
+        if (type === 'note') {
+            newItem.title = document.getElementById('modal-title')?.value || '';
+            newItem.content = document.getElementById('modal-content')?.value || '';
+        } else if (type === 'code') {
+            newItem.title = document.getElementById('modal-title')?.value || '';
+            newItem.code = document.getElementById('modal-code')?.value || '';
+            newItem.language = document.getElementById('modal-lang')?.value || 'javascript';
+        } else if (type === 'link') {
+            newItem.url = document.getElementById('modal-url')?.value || '';
+            newItem.title = document.getElementById('modal-title')?.value || '';
+        }
+        
+        if (newItem.title || newItem.content || newItem.code || newItem.url) {
             await saveItem(newItem);
             await loadInitialData();
         }
@@ -316,8 +435,69 @@ function showCreateModal(type) {
 }
 
 function showEditModal(item) {
-    // Similar to create but with pre-filled values
-    // For brevity, we'll implement this later if needed
+    let contentHtml = '';
+    
+    if (item.type === 'note') {
+        contentHtml = `
+            <input id="edit-title" value="${escapeHTML(item.title || '')}" placeholder="Title">
+            <textarea id="edit-content" placeholder="Content" rows="6">${escapeHTML(item.content || '')}</textarea>
+        `;
+    } else if (item.type === 'code') {
+        contentHtml = `
+            <input id="edit-title" value="${escapeHTML(item.title || '')}" placeholder="Title">
+            <textarea id="edit-code" placeholder="Code" rows="8">${escapeHTML(item.code || '')}</textarea>
+            <select id="edit-lang">
+                <option ${item.language === 'javascript' ? 'selected' : ''} value="javascript">JavaScript</option>
+                <option ${item.language === 'python' ? 'selected' : ''} value="python">Python</option>
+                <option ${item.language === 'html' ? 'selected' : ''} value="html">HTML</option>
+                <option ${item.language === 'css' ? 'selected' : ''} value="css">CSS</option>
+            </select>
+        `;
+    } else if (item.type === 'link') {
+        contentHtml = `
+            <input id="edit-url" value="${escapeHTML(item.url || '')}" placeholder="URL">
+            <input id="edit-title" value="${escapeHTML(item.title || '')}" placeholder="Title (optional)">
+        `;
+    }
+    
+    const modalHtml = `
+        <div class="modal-overlay" id="edit-modal">
+            <div class="modal">
+                <h3>Edit ${item.type}</h3>
+                <div class="modal-content">
+                    ${contentHtml}
+                </div>
+                <div class="modal-actions">
+                    <button id="edit-cancel">Cancel</button>
+                    <button id="edit-save" class="primary">Save</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    document.getElementById('edit-cancel').addEventListener('click', () => {
+        document.getElementById('edit-modal').remove();
+    });
+    
+    document.getElementById('edit-save').addEventListener('click', async () => {
+        if (item.type === 'note') {
+            item.title = document.getElementById('edit-title')?.value || '';
+            item.content = document.getElementById('edit-content')?.value || '';
+        } else if (item.type === 'code') {
+            item.title = document.getElementById('edit-title')?.value || '';
+            item.code = document.getElementById('edit-code')?.value || '';
+            item.language = document.getElementById('edit-lang')?.value || 'javascript';
+        } else if (item.type === 'link') {
+            item.url = document.getElementById('edit-url')?.value || '';
+            item.title = document.getElementById('edit-title')?.value || '';
+        }
+        
+        await saveItem(item);
+        await loadInitialData();
+        document.getElementById('edit-modal').remove();
+    });
 }
 
 function exportData() {
@@ -365,5 +545,5 @@ function escapeHTML(str) {
         .replace(/"/g, '&quot;');
 }
 
-// Start the app
+// Start
 init();
