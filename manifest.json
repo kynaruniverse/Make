@@ -1,7 +1,7 @@
 {
-    "name": "A Soft Place to Glitch · 2035",
-    "short_name": "Soft Glitch",
-    "description": "Your personal command center for notes, code, links, and ideas.",
+    "name": "Maké · personal command center",
+    "short_name": "Maké",
+    "description": "A modular workspace for notes, code, links, and sticky notes.",
     "start_url": "/",
     "display": "standalone",
     "background_color": "#0a0c0e",
