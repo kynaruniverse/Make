@@ -73,7 +73,6 @@ export const Modal = {
             `;
         }
         this.show(`Edit ${widget.type}`, html, async () => {
-            // Update widget and save
             if (widget.type === 'note') {
                 widget.title = document.getElementById('modal-note-title').value;
                 widget.content = document.getElementById('modal-note-content').value;
@@ -88,7 +87,7 @@ export const Modal = {
                 widget.text = document.getElementById('modal-sticky-text').value;
                 widget.color = document.getElementById('modal-sticky-color').value;
             }
-            const { saveWidget } = await import('./storage.js');
+            const { saveWidget } = await import('../core/storage.js');
             await saveWidget(widget);
             const { state } = await import('../core/state.js');
             state.widgets = await (await import('../core/storage.js')).getAllWidgets();
@@ -101,16 +100,21 @@ export function showModal(title, contentHtml, onOk) {
 }
 
 export function showSettings() {
+    const token = localStorage.getItem('github_token') || '';
     Modal.show('Settings', `
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
             <button id="export-btn">Export Backup</button>
             <button id="import-btn">Import Backup</button>
         </div>
-        <div style="margin-top:16px;">
-            <button id="gist-sync">Sync with GitHub Gist (beta)</button>
+        <div class="github-sync" style="margin-top:16px; border-top:1px solid #2a2f33; padding-top:16px;">
+            <h4 style="margin-bottom:8px;">GitHub Gist Sync</h4>
+            <input type="password" id="github-token" placeholder="Personal Access Token" value="${escapeHTML(token)}">
+            <button id="save-token">Save Token</button>
+            <button id="sync-gist">Sync to Gist</button>
+            <div id="gist-status" style="margin-top:8px; font-size:12px;"></div>
         </div>
     `, () => {});
-    // Attach listeners after modal shows
+
     setTimeout(() => {
         document.getElementById('export-btn')?.addEventListener('click', () => {
             import('../core/storage.js').then(({ getAllWidgets }) => {
@@ -150,9 +154,48 @@ export function showSettings() {
             };
             input.click();
         });
-        document.getElementById('gist-sync')?.addEventListener('click', () => {
-            alert('GitHub Gist sync not yet implemented.');
-            Modal.hide();
+
+        // GitHub token save
+        const tokenInput = document.getElementById('github-token');
+        document.getElementById('save-token')?.addEventListener('click', () => {
+            localStorage.setItem('github_token', tokenInput.value);
+            document.getElementById('gist-status').textContent = 'Token saved locally.';
+        });
+
+        document.getElementById('sync-gist')?.addEventListener('click', async () => {
+            const token = localStorage.getItem('github_token');
+            if (!token) {
+                document.getElementById('gist-status').textContent = 'Please save a token first.';
+                return;
+            }
+            const status = document.getElementById('gist-status');
+            status.textContent = 'Syncing...';
+            try {
+                const { getAllWidgets } = await import('../core/storage.js');
+                const widgets = await getAllWidgets();
+                const gistData = {
+                    description: 'Maké backup',
+                    public: false,
+                    files: {
+                        'make-backup.json': {
+                            content: JSON.stringify(widgets, null, 2)
+                        }
+                    }
+                };
+                const res = await fetch('https://api.github.com/gists', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `token ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(gistData)
+                });
+                if (!res.ok) throw new Error('GitHub API error');
+                const data = await res.json();
+                status.innerHTML = `✅ Synced! <a href="${data.html_url}" target="_blank">View Gist</a>`;
+            } catch (err) {
+                status.textContent = `❌ Sync failed: ${err.message}`;
+            }
         });
     }, 100);
 }

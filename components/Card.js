@@ -9,6 +9,11 @@ export function Card(widget) {
     card.dataset.id = widget.id;
     card.dataset.type = widget.type;
 
+    // Selection indicator (visual)
+    if (state.selectionMode && state.selectedIds.has(widget.id)) {
+        card.classList.add('selected');
+    }
+
     // Header
     const header = document.createElement('div');
     header.className = 'card-header';
@@ -41,7 +46,6 @@ export function Card(widget) {
             e.stopPropagation();
             widget.size = sz.toLowerCase();
             card.className = `card size-${widget.size}`;
-            // Persist size change
             import('../core/storage.js').then(({ saveWidget }) => saveWidget(widget));
         });
         footer.appendChild(btn);
@@ -52,7 +56,13 @@ export function Card(widget) {
     editBtn.innerHTML = '✎';
     editBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        editWidget(widget);
+        if (state.selectionMode) {
+            // In selection mode, edit is disabled or behaves differently?
+            // We'll just toggle selection for now
+            state.toggleSelection(widget.id);
+        } else {
+            editWidget(widget);
+        }
     });
     footer.appendChild(editBtn);
 
@@ -61,13 +71,16 @@ export function Card(widget) {
     delBtn.innerHTML = '✕';
     delBtn.addEventListener('click', async (e) => {
         e.stopPropagation();
-        await deleteWidget(widget.id);
-        showUndo('Widget deleted', async () => {
-            // Undo: re-save
-            await (await import('../core/storage.js')).saveWidget(widget);
+        if (state.selectionMode) {
+            state.toggleSelection(widget.id);
+        } else {
+            await deleteWidget(widget.id);
+            showUndo('Widget deleted', async () => {
+                await (await import('../core/storage.js')).saveWidget(widget);
+                state.widgets = await (await import('../core/storage.js')).getAllWidgets();
+            });
             state.widgets = await (await import('../core/storage.js')).getAllWidgets();
-        });
-        state.widgets = await (await import('../core/storage.js')).getAllWidgets();
+        }
     });
     footer.appendChild(delBtn);
 
@@ -78,15 +91,37 @@ export function Card(widget) {
     card.addEventListener('touchstart', (e) => {
         pressTimer = setTimeout(() => {
             state.selectionMode = true;
-            state.selectedIds.add(widget.id);
-            state._notify();
+            state.toggleSelection(widget.id);
         }, 500);
     });
     card.addEventListener('touchend', () => clearTimeout(pressTimer));
     card.addEventListener('touchmove', () => clearTimeout(pressTimer));
 
-    // Double-click/tap for inline edit (same as edit modal for now)
-    card.addEventListener('dblclick', () => editWidget(widget));
+    // Regular click: if in selection mode, toggle; otherwise maybe open modal?
+    card.addEventListener('click', (e) => {
+        if (state.selectionMode) {
+            e.preventDefault();
+            state.toggleSelection(widget.id);
+        }
+        // else, do nothing (or could open modal)
+    });
+
+    // Double-click for edit (always works)
+    card.addEventListener('dblclick', () => {
+        if (!state.selectionMode) {
+            editWidget(widget);
+        }
+    });
+
+    // Subscribe to state changes to update selection class
+    const unsubscribe = state.subscribe(() => {
+        if (state.selectionMode && state.selectedIds.has(widget.id)) {
+            card.classList.add('selected');
+        } else {
+            card.classList.remove('selected');
+        }
+    });
+    // Store unsubscribe? Not necessary for now.
 
     return card;
 }
@@ -117,7 +152,6 @@ function renderContent(container, widget) {
         a.className = 'widget-link';
         a.textContent = widget.title || widget.url;
         container.appendChild(a);
-        // Optionally show favicon if we had it
     } else if (widget.type === 'sticky') {
         container.style.backgroundColor = widget.color || '#2a2f33';
         container.style.padding = '12px';

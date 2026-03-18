@@ -3,6 +3,7 @@ import { TopBar } from '../components/TopBar.js';
 import { Grid } from '../components/Grid.js';
 import { CommandPalette } from '../components/CommandPalette.js';
 import { Modal } from '../components/Modal.js';
+import { BulkBar } from '../components/BulkBar.js';
 import './storage.js'; // initializes DB
 
 // Global app container
@@ -15,6 +16,11 @@ async function init() {
     // Render top bar
     const topBar = TopBar();
     app.appendChild(topBar);
+
+    // Container for bulk bar (dynamic)
+    const bulkContainer = document.createElement('div');
+    bulkContainer.id = 'bulk-container';
+    app.appendChild(bulkContainer);
 
     // Create main container for grid
     const main = document.createElement('main');
@@ -30,9 +36,16 @@ async function init() {
     // Initialize modal
     Modal.init();
 
-    // Listen for state changes
+    // Listen for selection mode changes
     state.subscribe(() => {
-        Grid.refresh();
+        const container = document.getElementById('bulk-container');
+        if (state.selectionMode) {
+            if (!container.querySelector('.bulk-bar')) {
+                container.appendChild(BulkBar());
+            }
+        } else {
+            container.innerHTML = ''; // remove bulk bar
+        }
     });
 }
 

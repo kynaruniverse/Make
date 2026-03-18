@@ -1,6 +1,8 @@
 import { parseCommand } from '../core/commandParser.js';
 
 let palette, input, results;
+let history = [];
+let historyIndex = -1;
 
 export const CommandPalette = {
     init() {
@@ -20,6 +22,23 @@ export const CommandPalette = {
         input.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') this.hide();
             if (e.key === 'Enter') this.execute();
+            // History navigation
+            if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (history.length > 0) {
+                    historyIndex = (historyIndex + 1) % history.length;
+                    input.value = history[historyIndex];
+                }
+            }
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (history.length > 0) {
+                    historyIndex = (historyIndex - 1 + history.length) % history.length;
+                    input.value = history[historyIndex];
+                } else {
+                    input.value = '';
+                }
+            }
         });
 
         // Hide on click outside
@@ -43,6 +62,7 @@ export const CommandPalette = {
         input.focus();
         input.value = '';
         results.innerHTML = '';
+        historyIndex = -1;
     },
 
     hide() {
@@ -55,7 +75,6 @@ export const CommandPalette = {
             results.innerHTML = '';
             return;
         }
-        // Show suggestions
         const suggestions = [];
         if (text.startsWith('note ')) {
             suggestions.push(`note ${text.slice(5)}`);
@@ -66,7 +85,6 @@ export const CommandPalette = {
         } else if (text.startsWith('sticky ')) {
             suggestions.push(`sticky ${text.slice(7)}`);
         } else {
-            // Search suggestions from state
             import('../core/state.js').then(({ state }) => {
                 const matches = state.widgets.filter(w => 
                     (w.title && w.title.toLowerCase().includes(text.toLowerCase())) ||
@@ -90,7 +108,12 @@ export const CommandPalette = {
     },
 
     execute() {
-        parseCommand(input.value);
+        const cmd = input.value.trim();
+        if (cmd) {
+            history.unshift(cmd);
+            if (history.length > 20) history.pop();
+            parseCommand(cmd);
+        }
         this.hide();
     },
 
@@ -99,7 +122,6 @@ export const CommandPalette = {
         results.innerHTML = resultsArray.map(w => 
             `<div class="command-result-item">📄 ${w.title || w.content?.substring(0,30) || w.url} (${w.type})</div>`
         ).join('');
-        // Click to navigate to widget? For now just show.
     }
 };
 

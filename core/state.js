@@ -24,6 +24,22 @@ export const state = {
     get selectedIds() { return this._data.selectedIds; },
     set selectedIds(val) { this._data.selectedIds = val; this._notify(); },
 
+    // Helper methods
+    toggleSelection(id) {
+        if (this.selectedIds.has(id)) {
+            this.selectedIds.delete(id);
+        } else {
+            this.selectedIds.add(id);
+        }
+        this._notify(); // trigger re-render of cards
+    },
+
+    clearSelection() {
+        this.selectedIds.clear();
+        this.selectionMode = false;
+        this._notify();
+    },
+
     subscribe(callback) {
         this._listeners.push(callback);
     },
