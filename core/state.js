@@ -1,53 +1,34 @@
-import { getAllWidgets } from './storage.js';
+import { getAllItems, getItemsByLayer } from './storage.js';
 
-// Simple pub/sub state with localStorage persistence for ambient
 export const state = {
     _data: {
-        widgets: [],
+        backgroundItems: [], // cards (note, code, link)
+        stickyItems: [],     // floating stickies
         currentTab: 'notes',
-        ambientEnabled: localStorage.getItem('ambientEnabled') === 'true',
-        selectionMode: false,
-        selectedIds: new Set()
+        showAddMenu: false,
+        selectedStickyId: null
     },
     _listeners: [],
 
-    get widgets() { return this._data.widgets; },
-    set widgets(val) { this._data.widgets = val; this._notify(); },
+    get backgroundItems() { return this._data.backgroundItems; },
+    set backgroundItems(val) { this._data.backgroundItems = val; this._notify(); },
+
+    get stickyItems() { return this._data.stickyItems; },
+    set stickyItems(val) { this._data.stickyItems = val; this._notify(); },
 
     get currentTab() { return this._data.currentTab; },
     set currentTab(val) { this._data.currentTab = val; this._notify(); },
 
-    get ambientEnabled() { return this._data.ambientEnabled; },
-    set ambientEnabled(val) {
-        this._data.ambientEnabled = val;
-        localStorage.setItem('ambientEnabled', val);
-        this._notify();
-    },
+    get showAddMenu() { return this._data.showAddMenu; },
+    set showAddMenu(val) { this._data.showAddMenu = val; this._notify(); },
 
-    get selectionMode() { return this._data.selectionMode; },
-    set selectionMode(val) { this._data.selectionMode = val; this._notify(); },
-
-    get selectedIds() { return this._data.selectedIds; },
-    set selectedIds(val) { this._data.selectedIds = val; this._notify(); },
-
-    toggleSelection(id) {
-        if (this.selectedIds.has(id)) {
-            this.selectedIds.delete(id);
-        } else {
-            this.selectedIds.add(id);
-        }
-        this._notify();
-    },
-
-    clearSelection() {
-        this.selectedIds.clear();
-        this.selectionMode = false;
-        this._notify();
-    },
+    get selectedStickyId() { return this._data.selectedStickyId; },
+    set selectedStickyId(val) { this._data.selectedStickyId = val; this._notify(); },
 
     subscribe(callback) {
         this._listeners.push(callback);
     },
+
     _notify() {
         this._listeners.forEach(fn => fn());
     }
@@ -55,9 +36,12 @@ export const state = {
 
 export async function loadInitialData() {
     try {
-        state.widgets = await getAllWidgets() || [];
+        const allItems = await getAllItems();
+        state.backgroundItems = allItems.filter(item => item.layer === 'background');
+        state.stickyItems = allItems.filter(item => item.layer === 'sticky');
     } catch (err) {
-        console.error('Failed to load widgets', err);
-        state.widgets = [];
+        console.error('Failed to load data', err);
+        state.backgroundItems = [];
+        state.stickyItems = [];
     }
 }

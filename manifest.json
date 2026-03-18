@@ -1,12 +1,12 @@
 {
-    "name": "Maké · personal command center",
+    "name": "Maké · layered workspace",
     "short_name": "Maké",
-    "description": "A modular workspace for notes, code, links, and sticky notes.",
+    "description": "A digital desk with floating stickies and organised cards.",
     "start_url": "/",
     "display": "standalone",
-    "background_color": "#0a0c0e",
-    "theme_color": "#0a0c0e",
-    "orientation": "portrait",
+    "background_color": "#0f1419",
+    "theme_color": "#0f1419",
+    "orientation": "any",
     "icons": [
         {
             "src": "/icons/icon-192.png",
