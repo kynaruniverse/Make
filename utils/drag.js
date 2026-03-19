@@ -1,73 +1,81 @@
+/**
+ * MAKÉ UTILS — drag.js (V2)
+ * Touch + mouse drag for sticky notes.
+ * V2 fix: positions relative to parent container, not viewport.
+ */
+
 export function makeDraggable(element, onDrag, onStart, onEnd) {
-    let startX, startY, startLeft, startTop;
-    let isDragging = false;
+  let startX, startY, startLeft, startTop;
+  let isDragging = false;
 
-    const startDrag = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        
-        const clientX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
-        const clientY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY;
-        
-        const rect = element.getBoundingClientRect();
-        startLeft = rect.left;
-        startTop = rect.top;
-        startX = clientX;
-        startY = clientY;
-        
-        isDragging = true;
-        element.style.transition = 'none';
-        element.style.zIndex = '1000';
-        
-        if (onStart) onStart();
-        
-        document.addEventListener('mousemove', onDragMove);
-        document.addEventListener('touchmove', onDragMove, { passive: false });
-        document.addEventListener('mouseup', onDragEnd);
-        document.addEventListener('touchend', onDragEnd);
-    };
+  const getClient = (e) => e.touches
+    ? { x: e.touches[0].clientX, y: e.touches[0].clientY }
+    : { x: e.clientX, y: e.clientY };
 
-    const onDragMove = (e) => {
-        if (!isDragging) return;
-        e.preventDefault();
-        
-        const clientX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
-        const clientY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY;
-        
-        const deltaX = clientX - startX;
-        const deltaY = clientY - startY;
-        
-        const newLeft = startLeft + deltaX;
-        const newTop = startTop + deltaY;
-        
-        element.style.left = `${newLeft}px`;
-        element.style.top = `${newTop}px`;
-        
-        if (onDrag) onDrag(newLeft, newTop);
-    };
+  const startDrag = (e) => {
+    // Don't drag if the target is a textarea, button, or resize handle
+    if (e.target.tagName === 'TEXTAREA'  ||
+        e.target.tagName === 'BUTTON'    ||
+        e.target.classList.contains('resize-handle')) return;
 
-    const onDragEnd = (e) => {
-        if (!isDragging) return;
-        isDragging = false;
-        element.style.transition = '';
-        element.style.zIndex = '';
-        
-        const finalLeft = parseFloat(element.style.left);
-        const finalTop = parseFloat(element.style.top);
-        
-        if (onEnd) onEnd(finalLeft, finalTop);
-        
-        document.removeEventListener('mousemove', onDragMove);
-        document.removeEventListener('touchmove', onDragMove);
-        document.removeEventListener('mouseup', onDragEnd);
-        document.removeEventListener('touchend', onDragEnd);
-    };
+    e.preventDefault();
+    const { x, y } = getClient(e);
 
-    element.addEventListener('mousedown', startDrag);
-    element.addEventListener('touchstart', startDrag, { passive: false });
-    
-    return () => {
-        element.removeEventListener('mousedown', startDrag);
-        element.removeEventListener('touchstart', startDrag);
-    };
+    startLeft = parseFloat(element.style.left) || 0;
+    startTop  = parseFloat(element.style.top)  || 0;
+    startX    = x;
+    startY    = y;
+
+    isDragging = true;
+    element.style.transition = 'none';
+    element.style.zIndex     = '200';
+    element.classList.add('dragging');
+
+    if (onStart) onStart();
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('touchmove', onMove, { passive: false });
+    document.addEventListener('mouseup',   onDragEnd);
+    document.addEventListener('touchend',  onDragEnd);
+  };
+
+  const onMove = (e) => {
+    if (!isDragging) return;
+    e.preventDefault();
+    const { x, y } = getClient(e);
+
+    const newLeft = startLeft + (x - startX);
+    const newTop  = startTop  + (y - startY);
+
+    element.style.left = `${newLeft}px`;
+    element.style.top  = `${newTop}px`;
+
+    if (onDrag) onDrag(newLeft, newTop);
+  };
+
+  const onDragEnd = () => {
+    if (!isDragging) return;
+    isDragging = false;
+
+    element.style.transition = '';
+    element.classList.remove('dragging');
+    // Don't reset zIndex here — let CSS handle normal stack
+
+    const finalLeft = parseFloat(element.style.left);
+    const finalTop  = parseFloat(element.style.top);
+    if (onEnd) onEnd(finalLeft, finalTop);
+
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('touchmove', onMove);
+    document.removeEventListener('mouseup',   onDragEnd);
+    document.removeEventListener('touchend',  onDragEnd);
+  };
+
+  element.addEventListener('mousedown',  startDrag);
+  element.addEventListener('touchstart', startDrag, { passive: false });
+
+  return () => {
+    element.removeEventListener('mousedown',  startDrag);
+    element.removeEventListener('touchstart', startDrag);
+  };
 }

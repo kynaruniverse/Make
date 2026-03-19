@@ -1,0 +1,86 @@
+/* ============================================================
+   MAKÉ DESIGN SYSTEM — tokens.css  (V2)
+   Spacing, border-radius, elevation, typography scales
+   Source: Samsung Notes dimens.xml + integers.xml (APK decompile)
+   ============================================================ */
+
+:root {
+  /* ── ELEVATION / SHADOWS ── */
+  --make-shadow-1: 0 1px 3px rgba(0,0,0,0.14), 0 1px 2px rgba(0,0,0,0.10);
+  --make-shadow-2: 0 3px 8px rgba(0,0,0,0.20), 0 2px 4px rgba(0,0,0,0.14);
+  --make-shadow-3: 0 6px 18px rgba(0,0,0,0.30), 0 4px 8px rgba(0,0,0,0.18);
+  --make-shadow-4: 0 8px 28px rgba(0,0,0,0.45), 0 2px 8px rgba(0,0,0,0.26);
+  --make-shadow-5: 0 16px 40px rgba(0,0,0,0.40), 0 8px 16px rgba(0,0,0,0.22);
+
+  /* ── CATEGORY COLORS (Samsung Notes — 12 colors) ── */
+  --cat-red:    #ff4133;
+  --cat-orange: #ff7043;
+  --cat-yellow: #ffc107;
+  --cat-lime:   #8bc34a;
+  --cat-green:  #009e7c;
+  --cat-teal:   #47d6dc;
+  --cat-blue:   #5485ee;
+  --cat-violet: #bb5fcb;
+  --cat-pink:   #f6b7b4;
+
+  /* ── SPACING ── */
+  --space-1:  2px;
+  --space-2:  4px;
+  --space-3:  6px;
+  --space-4:  8px;
+  --space-5:  10px;
+  --space-6:  12px;
+  --space-7:  14px;
+  --space-8:  16px;
+  --space-9:  18px;
+  --space-10: 20px;
+  --space-12: 24px;
+  --space-16: 32px;
+  --space-20: 40px;
+
+  /* ── BORDER RADII ── */
+  --radius-xs:   4px;
+  --radius-sm:   8px;
+  --radius-md:   12px;
+  --radius-lg:   16px;
+  --radius-xl:   18px;
+  --radius-2xl:  22px;
+  --radius-3xl:  24px;
+  --radius-4xl:  26px;
+  --radius-full: 9999px;
+
+  /* Semantic */
+  --radius-card:    var(--radius-lg);
+  --radius-modal:   var(--radius-4xl);
+  --radius-chip:    var(--radius-3xl);
+  --radius-fab:     var(--radius-xl);
+  --radius-sticky:  var(--radius-md);
+  --radius-input:   var(--radius-md);
+  --radius-menu:    var(--radius-4xl);
+
+  /* ── TYPOGRAPHY ── */
+  --text-xs:   11px;
+  --text-sm:   12px;
+  --text-base: 13px;
+  --text-md:   14px;
+  --text-lg:   15px;
+  --text-xl:   16px;
+  --text-2xl:  18px;
+  --text-3xl:  20px;
+  --text-hero: 52px;
+
+  --font-title: 'Georgia', 'Times New Roman', serif;
+  --font-body:  'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-code:  'Courier New', 'Consolas', monospace;
+
+  /* ── COMPONENT SIZES ── */
+  --size-nav-height:     56px;
+  --size-fab:            52px;
+  --size-touch-min:      48px;
+  --size-card-min-h:     172px;
+  --size-sticky-w:       160px;
+  --size-sticky-h:       130px;
+  --size-modal-max-w:    480px;
+  --size-header-widget-w:140px;
+  --size-header-widget-h: 72px;
+}

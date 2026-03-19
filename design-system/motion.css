@@ -1,0 +1,119 @@
+/* ============================================================
+   MAKÉ DESIGN SYSTEM — motion.css  (V2)
+   M3 easing curves + Samsung Notes SESL animation DNA
+   Source: pathInterpolator XML + integers.xml (APK ground truth)
+   ============================================================ */
+
+:root {
+  /* ── EASING CURVES (M3 + SESL) ── */
+  --ease-standard:        cubic-bezier(0.2, 0.0, 0.0, 1.0);
+  --ease-standard-decel:  cubic-bezier(0.0, 0.0, 0.0, 1.0);
+  --ease-standard-accel:  cubic-bezier(0.3, 0.0, 1.0, 1.0);
+  --ease-emphasized:      cubic-bezier(0.2, 0.0, 0.0, 1.0);
+  --ease-emph-decel:      cubic-bezier(0.05, 0.7, 0.1, 1.0);
+  --ease-emph-accel:      cubic-bezier(0.3, 0.0, 0.8, 0.15);
+  --ease-fast-out-slow-in:cubic-bezier(0.4, 0.0, 0.2, 1.0);
+  --ease-fast-out-linear: cubic-bezier(0.4, 0.0, 1.0, 1.0);
+  --ease-linear-out-slow: cubic-bezier(0.0, 0.0, 0.2, 1.0);
+  --ease-spring:          cubic-bezier(0.22, 0.25, 0.0, 1.0);
+  /* Samsung Notes sine family — sticky note physics */
+  --ease-sine-33: cubic-bezier(0.33, 0.0, 0.67, 1.0);
+  --ease-sine-60: cubic-bezier(0.33, 0.0, 0.40, 1.0);
+
+  /* ── DURATIONS (integers.xml ground truth) ── */
+  --dur-instant:   50ms;
+  --dur-micro:    100ms;
+  --dur-short-1:  150ms;
+  --dur-short-2:  200ms;
+  --dur-medium-1: 250ms;
+  --dur-medium-2: 300ms;
+  --dur-medium-4: 400ms;
+  --dur-long-1:   450ms;
+  --dur-long-2:   500ms;
+  /* Semantic */
+  --dur-enter:  var(--dur-medium-1);
+  --dur-exit:   var(--dur-short-2);
+  --dur-hover:  var(--dur-short-2);
+  --dur-press:  var(--dur-micro);
+  /* Samsung SESL recoil */
+  --dur-recoil-press:   100ms;
+  --dur-recoil-release: 350ms;
+}
+
+/* ── KEYFRAMES ── */
+
+@keyframes fade-in  { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fade-out { from { opacity: 1; } to { opacity: 0; } }
+
+@keyframes modal-enter {
+  from { opacity: 0; transform: scale(0.85) translateY(8px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes modal-exit {
+  from { opacity: 1; transform: scale(1); }
+  to   { opacity: 0; transform: scale(0.96); }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes card-enter {
+  from { opacity: 0; transform: translateY(8px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes sticky-drop {
+  0%   { transform: scale(1.08) rotate(var(--sticky-r, 0deg)); opacity: 0.7; }
+  55%  { transform: scale(0.96) rotate(var(--sticky-r, 0deg)); }
+  78%  { transform: scale(1.02) rotate(var(--sticky-r, 0deg)); }
+  100% { transform: scale(1)    rotate(var(--sticky-r, 0deg)); opacity: 1; }
+}
+
+@keyframes sticky-delete {
+  from { opacity: 1; transform: scale(1); }
+  to   { opacity: 0; transform: scale(0.85); }
+}
+
+@keyframes fab-show {
+  from { opacity: 0; transform: scale(0.88) rotate(-30deg); }
+  to   { opacity: 1; transform: scale(1) rotate(0deg); }
+}
+@keyframes fab-pulse {
+  0%  { transform: scale(1); }
+  40% { transform: scale(0.90); }
+  100%{ transform: scale(1); }
+}
+
+@keyframes menu-in {
+  from { opacity: 0; transform: scale(0.92) translateY(-6px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes spin    { to { transform: rotate(360deg); } }
+@keyframes shimmer { 0%{ background-position:-200% center; } 100%{ background-position:200% center; } }
+
+@keyframes ambient-reorder {
+  0%  { opacity: 1; transform: translateY(0); }
+  35% { opacity: 0.5; transform: translateY(-5px); }
+  100%{ opacity: 1; transform: translateY(0); }
+}
+
+@keyframes banner-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(6px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+@keyframes context-menu-in {
+  from { opacity: 0; transform: scale(0.94); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* ── REDUCE MOTION ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
