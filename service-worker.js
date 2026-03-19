@@ -9,9 +9,6 @@ const PRECACHE = [
   './core/storage.js',
   './utils/drag.js',
   './utils/resize.js',
-  './design-system/colors.css',
-  './design-system/tokens.css',
-  './design-system/motion.css',
   './manifest.json',
   './icons/icon-192.png',
   './icons/icon-512.png',
@@ -34,7 +31,6 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-  // Cache-first for pre-cached assets, network-first for everything else
   e.respondWith(
     caches.match(e.request).then(cached => {
       if (cached) return cached;
