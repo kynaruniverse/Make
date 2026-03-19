@@ -32,7 +32,6 @@ export const state = {
     sortField:        prefs.sortField        || 'updatedAt',
     sortDir:          prefs.sortDir          || 'desc',
     viewMode:         prefs.viewMode         || 'grid',
-    searchOpen:       false,
   },
   _listeners: [],
 
@@ -81,8 +80,6 @@ export const state = {
     this._notify();
   },
 
-  get searchOpen()  { return this._data.searchOpen; },
-  set searchOpen(v) { this._data.searchOpen = v; this._notify(); },
 
   subscribe(cb) { this._listeners.push(cb); },
 

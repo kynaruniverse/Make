@@ -340,7 +340,7 @@ function createStickyEl(item) {
       <button class="sticky-delete" aria-label="Delete sticky">✕</button>
     </div>
     <textarea placeholder="Write something…" aria-label="Sticky note text">${escHTML(item.text || '')}</textarea>
-    <div class="resize-handle-corner"></div>
+
   `;
 
   return el;
