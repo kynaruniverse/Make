@@ -1,14 +1,13 @@
 /**
- * MAKÉ V4 — app.js
- *
- * New in V4 vs V3:
- * - Date widget: shows live date + day name, echo drop-shadow, replaces decorative bars
- * - Theme toggle: light/dark mode, persisted to localStorage
- * - Burger menu drawer: sort toggle, filter toggle, create folder stub, search, settings
- * - Correct colour palette: #b68d93 / #b6a486 / #9ba59a / #444444
- * - Echo shadows on date widget and FAB
- * - Sort and search moved into drawer (toolbar buttons kept as shortcuts)
- * - All V3 functionality preserved: cards, stickies, modals, context menu, drag/resize
+ * MAKÉ V5 — app.js
+ * Changes from V4:
+ * - BUGFIX: saveItem null-id stripped (IndexedDB fix in storage.js)
+ * - BUGFIX: favourites filter now applied in getFilteredItems()
+ * - Notes: full-page rich text editor (bold/italic/size/color/lists)
+ * - Code: full-page terminal editor (line nums, tab key, language tags, copy)
+ * - Links: rendered as button grid instead of cards
+ * - Stickies: redesigned realistic paper look with tape + fold
+ * - State subscription also re-renders stickies
  */
 
 import { state, loadInitialData, upsertItemInState, removeItemFromState } from './core/state.js';
@@ -20,11 +19,13 @@ import { makeResizable  } from './utils/resize.js';
 const app = document.getElementById('app');
 const dragCleanups   = new Map();
 const resizeCleanups = new Map();
-let ambientInterval  = null;
+let   ambientInterval = null;
 
-const STICKY_COLORS = [
-  '#ffe6ae', '#dbf0e4', '#d0e0f4', '#f4ddd9',
-];
+const STICKY_COLORS = ['#fff176','#a5d6a7','#90caf9','#f48fb1','#ce93d8','#ffcc80'];
+const STICKY_TAPE_COLORS = ['rgba(255,255,255,0.55)','rgba(200,240,210,0.55)','rgba(180,220,255,0.55)','rgba(255,190,210,0.55)','rgba(220,180,255,0.55)','rgba(255,210,160,0.55)'];
+
+const NOTE_COLORS = ['#ffffff','#ff6b6b','#ffd93d','#6bcb77','#4d96ff','#c77dff','#ff9f40','#00d2d3'];
+const LANGUAGES   = ['javascript','typescript','python','html','css','bash','json','sql','java','swift','kotlin','rust','go','cpp','markdown','plaintext'];
 
 // ─── INIT ─────────────────────────────────────────────────────
 async function init() {
@@ -36,18 +37,13 @@ async function init() {
   renderCards();
   renderStickies();
   attachShellListeners();
-  state.subscribe(() => { renderCards(); syncAddMenu(); syncAmbientToggle(); });
+  state.subscribe(() => { renderCards(); renderStickies(); syncAddMenu(); syncAmbientToggle(); });
   initAmbient();
 }
 
 // ─── THEME ────────────────────────────────────────────────────
-function getTheme() {
-  return localStorage.getItem('make_theme') || 'light';
-}
-function setTheme(t) {
-  localStorage.setItem('make_theme', t);
-  applyTheme(t);
-}
+function getTheme()  { return localStorage.getItem('make_theme') || 'light'; }
+function setTheme(t) { localStorage.setItem('make_theme', t); applyTheme(t); }
 function applyTheme(t) {
   if (t === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
   else              document.documentElement.removeAttribute('data-theme');
@@ -55,11 +51,10 @@ function applyTheme(t) {
 function toggleTheme() {
   const next = getTheme() === 'dark' ? 'light' : 'dark';
   setTheme(next);
-  const track = document.getElementById('theme-toggle');
-  if (track) track.classList.toggle('on', next === 'dark');
+  document.getElementById('theme-toggle')?.classList.toggle('on', next === 'dark');
 }
 
-// ─── DATE HELPERS ─────────────────────────────────────────────
+// ─── DATE ─────────────────────────────────────────────────────
 function getLiveDate() {
   const now  = new Date();
   const day  = now.toLocaleDateString('en-GB', { weekday: 'long' });
@@ -70,26 +65,22 @@ function getLiveDate() {
 // ─── SHELL ────────────────────────────────────────────────────
 function buildShell() {
   const { day, date } = getLiveDate();
-  const isDark        = getTheme() === 'dark';
-
+  const isDark = getTheme() === 'dark';
   app.innerHTML = `
     <div class="app-header">
       <div class="header-row">
-
         <button class="burger-btn" id="burger-btn" aria-label="Menu">
           <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
         </button>
-
         <div class="header-right">
           <div class="date-widget" id="date-widget" aria-hidden="true">
             <div class="date-widget-date">${date}</div>
             <div class="date-widget-day">${day}</div>
           </div>
-          <button class="toggle-track ${isDark ? 'on' : ''}" id="theme-toggle" aria-label="Toggle theme">
+          <button class="toggle-track ${isDark?'on':''}" id="theme-toggle" aria-label="Toggle theme">
             <div class="toggle-knob"></div>
           </button>
         </div>
-
       </div>
       <h1 class="app-title">Maké</h1>
       <p class="app-subtitle">Your personal command center</p>
@@ -97,21 +88,21 @@ function buildShell() {
 
     <div class="canvas">
       <div class="grid-layer" id="grid-layer">
-        <div class="grid" id="grid-container" data-view-mode="${state.viewMode}"></div>
+        <div class="grid" id="grid-container"></div>
       </div>
       <div class="sticky-layer" id="sticky-layer"></div>
     </div>
 
     <div class="add-menu hidden" id="add-menu">
-      <button data-type="note"   class="add-menu-item">
+      <button data-type="note" class="add-menu-item">
         <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
         <span>New Note</span>
       </button>
-      <button data-type="code"   class="add-menu-item">
+      <button data-type="code" class="add-menu-item">
         <svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
         <span>Code Snippet</span>
       </button>
-      <button data-type="link"   class="add-menu-item">
+      <button data-type="link" class="add-menu-item">
         <svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
         <span>Add Link</span>
       </button>
@@ -150,6 +141,8 @@ function getFilteredItems() {
     if (tab === 'links') return i.type === ItemType.LINK;
     return true;
   });
+  // BUGFIX: apply favourites filter if enabled
+  if (state._data.filterFavourites) items = items.filter(i => i.isFavorited);
   const field = state.sortField, dir = state.sortDir;
   return [...items].sort((a, b) => {
     if (field === 'title') {
@@ -173,6 +166,7 @@ function renderCards() {
   const items = getFilteredItems();
 
   if (items.length === 0) {
+    grid.className = 'grid';
     grid.innerHTML = `
       <div class="empty-state">
         <div class="empty-icon">${emptyIcon(state.currentTab)}</div>
@@ -184,6 +178,25 @@ function renderCards() {
     return;
   }
 
+  // Links tab — render as button grid
+  if (state.currentTab === 'links') {
+    grid.className = 'links-grid';
+    grid.innerHTML = items.map(item => `
+      <a class="link-btn" data-id="${item.id}"
+         href="${esc(item.url||'#')}" target="_blank" rel="noopener noreferrer"
+         title="${esc(item.url||'')}">
+        <div class="link-btn-icon">
+          <svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+        </div>
+        <span class="link-btn-label">${esc(item.title || item.url || 'Link')}</span>
+      </a>
+    `).join('');
+    attachLinkListeners();
+    return;
+  }
+
+  // Standard card grid
+  grid.className = 'grid';
   const existing = new Map();
   grid.querySelectorAll('.card[data-id]').forEach(el => existing.set(+el.dataset.id, el));
 
@@ -204,22 +217,22 @@ function renderCards() {
 
   grid.innerHTML = '';
   grid.appendChild(frag);
-  grid.dataset.viewMode = state.viewMode;
   attachCardListeners();
 }
 
 function cardHTML(item) {
-  const preview  = (item.content||item.code||item.url||'').slice(0, 200);
+  // Strip HTML tags for plain text preview
+  const raw = item.content || item.code || item.url || '';
+  const preview = raw.replace(/<[^>]*>/g, '').replace(/&[a-z]+;/gi, ' ').slice(0, 200);
   const date     = item.updatedAt ? relativeDate(item.updatedAt) : '';
   const tags     = item.tags?.length
-    ? `<div class="card-tags">${item.tags.map(t=>`<span class="tag-chip">${esc(t)}</span>`).join('')}</div>`
-    : '';
+    ? `<div class="card-tags">${item.tags.map(t=>`<span class="tag-chip">${esc(t)}</span>`).join('')}</div>` : '';
   const typeIcon = item.type==='note' ? iNote() : item.type==='code' ? iCode() : iLink();
-
+  const typeLabel = item.type==='note'?'Note':item.type==='code'?'Code':'Link';
   return `
     <div class="card-header">
       <div class="card-type-badge">${typeIcon}</div>
-      <span class="card-type-label">${item.type==='note'?'Note':item.type==='code'?'Code':'Link'}: ${esc(item.title||'Untitled')}</span>
+      <span class="card-type-label">${typeLabel}: ${esc(item.title||'Untitled')}</span>
     </div>
     <div class="card-content">${esc(preview)}</div>
     ${tags}
@@ -251,28 +264,40 @@ function renderStickies() {
       attachStickyBehaviour(el, item);
       requestAnimationFrame(() => el.classList.add('sticky-dropped'));
     } else {
-      el.style.backgroundColor = item.color || STICKY_COLORS[0];
+      const colorIdx = STICKY_COLORS.indexOf(item.color);
+      el.style.setProperty('--sticky-color', item.color || STICKY_COLORS[0]);
+      el.style.setProperty('--sticky-tape', STICKY_TAPE_COLORS[colorIdx >= 0 ? colorIdx : 0]);
       el.style.setProperty('--sticky-r', `${item.rotation||0}deg`);
+      el.style.transform = `rotate(${item.rotation||0}deg)`;
     }
   });
 }
 
 function makeStickyEl(item) {
-  const x   = item.position?.x   || (50  + Math.random()*120);
-  const y   = item.position?.y   || (30  + Math.random()*100);
-  const w   = item.position?.width  || 160;
-  const h   = item.position?.height || 130;
-  const rot = item.rotation || 0;
+  const x    = item.position?.x      || (50  + Math.random()*120);
+  const y    = item.position?.y      || (30  + Math.random()*100);
+  const w    = item.position?.width  || 175;
+  const h    = item.position?.height || 150;
+  const rot  = item.rotation || 0;
+  const col  = item.color || STICKY_COLORS[0];
+  const colorIdx = STICKY_COLORS.indexOf(col);
+  const tape = STICKY_TAPE_COLORS[colorIdx >= 0 ? colorIdx : 0];
 
   const el = document.createElement('div');
   el.className  = 'sticky-note';
   el.dataset.id = item.id;
-  el.style.cssText = `left:${x}px;top:${y}px;width:${w}px;height:${h}px;background-color:${item.color||STICKY_COLORS[0]};--sticky-r:${rot}deg;transform:rotate(${rot}deg);`;
+  el.style.cssText = `left:${x}px;top:${y}px;width:${w}px;height:${h}px;--sticky-color:${col};--sticky-tape:${tape};--sticky-r:${rot}deg;transform:rotate(${rot}deg);`;
+
   el.innerHTML = `
-    <div class="sticky-header">
-      <button class="sticky-delete" aria-label="Delete">✕</button>
+    <div class="sticky-tape"></div>
+    <div class="sticky-inner">
+      <div class="sticky-header">
+        <button class="sticky-delete" aria-label="Delete">✕</button>
+      </div>
+      <textarea class="sticky-textarea" placeholder="Write something…">${esc(item.text||'')}</textarea>
     </div>
-    <textarea placeholder="Write something…">${esc(item.text||'')}</textarea>
+    <div class="sticky-fold"></div>
+    <div class="resize-handle"></div>
   `;
   return el;
 }
@@ -286,13 +311,13 @@ function attachStickyBehaviour(el, item) {
     setTimeout(async () => { await deleteItem(id); removeItemFromState(id); el.remove(); }, 200);
   });
 
-  const ta = el.querySelector('textarea');
-  let t;
+  const ta = el.querySelector('.sticky-textarea');
+  let debounce;
   ta.addEventListener('input', () => {
-    clearTimeout(t);
-    t = setTimeout(async () => {
+    clearTimeout(debounce);
+    debounce = setTimeout(async () => {
       const found = state.stickyItems.find(i => i.id === id);
-      if (found) { found.text = ta.value; const s = await saveItem(found); upsertItemInState(s); }
+      if (found) { found.text = ta.value; upsertItemInState(await saveItem(found)); }
     }, 600);
   });
 
@@ -306,7 +331,6 @@ function attachStickyBehaviour(el, item) {
 
 // ─── SHELL LISTENERS ──────────────────────────────────────────
 function attachShellListeners() {
-  // Nav tabs
   app.addEventListener('click', e => {
     const tab = e.target.closest('.nav-btn[data-tab]');
     if (tab) { state.currentTab = tab.dataset.tab; return; }
@@ -316,21 +340,21 @@ function attachShellListeners() {
     }
   });
 
-  // Add menu
   document.getElementById('add-menu').addEventListener('click', e => {
     const btn = e.target.closest('[data-type]');
     if (!btn) return;
     state.showAddMenu = false;
-    btn.dataset.type === 'sticky' ? showStickyModal() : showCreateModal(btn.dataset.type);
+    const t = btn.dataset.type;
+    if (t === 'sticky')      showStickyModal();
+    else if (t === 'note')   showNoteEditor();
+    else if (t === 'code')   showCodeEditor();
+    else if (t === 'link')   showLinkModal();
   });
 
-  // Theme toggle
   document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
-
-  // Burger opens drawer
   document.getElementById('burger-btn').addEventListener('click', showDrawer);
+  document.getElementById('settings-btn').addEventListener('click', showSettingsModal);
 
-  // Refresh date widget every minute so it stays accurate
   setInterval(() => {
     const { day, date } = getLiveDate();
     const dw = document.getElementById('date-widget');
@@ -339,9 +363,6 @@ function attachShellListeners() {
       dw.querySelector('.date-widget-day').textContent  = day;
     }
   }, 60_000);
-
-  // Settings
-  document.getElementById('settings-btn').addEventListener('click', showSettingsModal);
 }
 
 function attachCardListeners() {
@@ -349,7 +370,10 @@ function attachCardListeners() {
     card.addEventListener('click', e => {
       if (e.target.closest('.card-fav')) return;
       const item = state.backgroundItems.find(i => i.id === +card.dataset.id);
-      if (item) showEditModal(item);
+      if (!item) return;
+      if (item.type === 'note') showNoteEditor(item);
+      else if (item.type === 'code') showCodeEditor(item);
+      else showLinkModal(item);
     });
     card.addEventListener('contextmenu', e => {
       e.preventDefault();
@@ -362,7 +386,7 @@ function attachCardListeners() {
         const item = state.backgroundItems.find(i => i.id === +card.dataset.id);
         if (item) showContextMenu(e.touches[0], item);
       }, 500);
-    }, { passive:true });
+    }, { passive: true });
     card.addEventListener('touchend',  () => clearTimeout(pt));
     card.addEventListener('touchmove', () => clearTimeout(pt));
   });
@@ -378,13 +402,400 @@ function attachCardListeners() {
   });
 }
 
+function attachLinkListeners() {
+  document.querySelectorAll('.link-btn[data-id]').forEach(btn => {
+    btn.addEventListener('contextmenu', e => {
+      e.preventDefault();
+      const item = state.backgroundItems.find(i => i.id === +btn.dataset.id);
+      if (item) showContextMenu(e, item);
+    });
+    let pt;
+    btn.addEventListener('touchstart', e => {
+      pt = setTimeout(() => {
+        e.preventDefault();
+        const item = state.backgroundItems.find(i => i.id === +btn.dataset.id);
+        if (item) showContextMenu(e.touches[0], item);
+      }, 500);
+    }, { passive: true });
+    btn.addEventListener('touchend',  () => clearTimeout(pt));
+    btn.addEventListener('touchmove', () => clearTimeout(pt));
+  });
+}
+
 function syncAddMenu() {
   document.getElementById('add-menu')?.classList.toggle('hidden', !state.showAddMenu);
 }
 function syncAmbientToggle() {
-  // ambient toggle lives in drawer now — only update if open
   const t = document.getElementById('ambient-mini-toggle');
   if (t) t.classList.toggle('on', state.ambientEnabled);
+}
+
+// ─── NOTE EDITOR ──────────────────────────────────────────────
+function showNoteEditor(existingItem = null) {
+  document.getElementById('note-editor-page')?.remove();
+  const page = document.createElement('div');
+  page.className = 'editor-page note-editor-page';
+  page.id = 'note-editor-page';
+
+  const rawContent = existingItem?.content || '';
+  // Support both HTML (from rich editor) and plain text (legacy)
+  const isHtml = /<[a-z][\s\S]*>/i.test(rawContent);
+  const bodyHtml = isHtml
+    ? rawContent
+    : rawContent.split('\n').map(l => `<div>${esc(l) || '<br>'}</div>`).join('') || '<div><br></div>';
+
+  page.innerHTML = `
+    <div class="editor-topbar">
+      <button class="editor-back-btn" id="note-back">
+        <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <span class="editor-topbar-title">${existingItem ? 'Edit Note' : 'New Note'}</span>
+      <button class="editor-save-btn" id="note-save">Save</button>
+    </div>
+
+    <input class="editor-title-input" id="note-title" placeholder="Title…"
+           value="${esc(existingItem?.title || '')}" autocomplete="off">
+
+    <div class="editor-toolbar" id="note-toolbar">
+      <div class="toolbar-group">
+        <button class="toolbar-btn" data-cmd="bold"          title="Bold"><b>B</b></button>
+        <button class="toolbar-btn" data-cmd="italic"        title="Italic"><i>I</i></button>
+        <button class="toolbar-btn" data-cmd="underline"     title="Underline"><u>U</u></button>
+        <button class="toolbar-btn" data-cmd="strikeThrough" title="Strike"><s>S</s></button>
+      </div>
+      <div class="toolbar-sep"></div>
+      <div class="toolbar-group">
+        <button class="toolbar-btn size-btn" data-cmd="fontSize" data-val="2" title="Small">xs</button>
+        <button class="toolbar-btn size-btn" data-cmd="fontSize" data-val="3" title="Normal">sm</button>
+        <button class="toolbar-btn size-btn" data-cmd="fontSize" data-val="5" title="Large">lg</button>
+        <button class="toolbar-btn size-btn" data-cmd="formatBlock" data-val="h2" title="Heading">H1</button>
+      </div>
+      <div class="toolbar-sep"></div>
+      <div class="toolbar-group">
+        <button class="toolbar-btn" data-cmd="insertUnorderedList" title="Bullet list">
+          <svg viewBox="0 0 20 20" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+            <circle cx="3" cy="5" r="1.2" fill="currentColor" stroke="none"/>
+            <circle cx="3" cy="10" r="1.2" fill="currentColor" stroke="none"/>
+            <circle cx="3" cy="15" r="1.2" fill="currentColor" stroke="none"/>
+            <line x1="7" y1="5" x2="18" y2="5"/><line x1="7" y1="10" x2="18" y2="10"/><line x1="7" y1="15" x2="18" y2="15"/>
+          </svg>
+        </button>
+        <button class="toolbar-btn" data-cmd="insertOrderedList" title="Numbered list">
+          <svg viewBox="0 0 20 20" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+            <text x="1" y="7" font-size="5.5" fill="currentColor" stroke="none">1.</text>
+            <text x="1" y="12" font-size="5.5" fill="currentColor" stroke="none">2.</text>
+            <text x="1" y="17" font-size="5.5" fill="currentColor" stroke="none">3.</text>
+            <line x1="8" y1="5" x2="18" y2="5"/><line x1="8" y1="10" x2="18" y2="10"/><line x1="8" y1="15" x2="18" y2="15"/>
+          </svg>
+        </button>
+        <button class="toolbar-btn" data-cmd="outdent"  title="Outdent">⇤</button>
+        <button class="toolbar-btn" data-cmd="indent"   title="Indent">⇥</button>
+      </div>
+      <div class="toolbar-sep"></div>
+      <div class="toolbar-group color-swatches">
+        ${NOTE_COLORS.map(c =>
+          `<button class="toolbar-color-dot" data-cmd="foreColor" data-val="${c}"
+                   style="background:${c}" title="Color ${c}"></button>`
+        ).join('')}
+      </div>
+    </div>
+
+    <div class="editor-body" id="note-body" contenteditable="true" spellcheck="true">${bodyHtml}</div>
+  `;
+
+  document.body.appendChild(page);
+  requestAnimationFrame(() => page.classList.add('open'));
+
+  const body    = page.querySelector('#note-body');
+  const toolbar = page.querySelector('#note-toolbar');
+
+  // Toolbar commands — mousedown keeps focus in editor
+  toolbar.addEventListener('mousedown', e => {
+    const btn = e.target.closest('[data-cmd]');
+    if (!btn) return;
+    e.preventDefault();
+    document.execCommand(btn.dataset.cmd, false, btn.dataset.val || null);
+    updateToolbarState();
+  });
+
+  // Touch support for toolbar
+  toolbar.addEventListener('touchend', e => {
+    const btn = e.target.closest('[data-cmd]');
+    if (!btn) return;
+    e.preventDefault();
+    body.focus();
+    document.execCommand(btn.dataset.cmd, false, btn.dataset.val || null);
+    updateToolbarState();
+  });
+
+  function updateToolbarState() {
+    ['bold','italic','underline','strikeThrough','insertUnorderedList','insertOrderedList'].forEach(cmd => {
+      toolbar.querySelectorAll(`[data-cmd="${cmd}"]`).forEach(btn => {
+        try { btn.classList.toggle('active', document.queryCommandState(cmd)); } catch {}
+      });
+    });
+  }
+
+  body.addEventListener('keyup',   updateToolbarState);
+  body.addEventListener('mouseup', updateToolbarState);
+
+  const close = () => {
+    page.classList.remove('open');
+    setTimeout(() => page.remove(), 320);
+  };
+
+  page.querySelector('#note-back').addEventListener('click', close);
+
+  page.querySelector('#note-save').addEventListener('click', async () => {
+    const title   = page.querySelector('#note-title').value.trim();
+    const content = body.innerHTML;
+    const plain   = body.innerText || '';
+    if (!title && !plain.trim()) { close(); return; }
+    const tags = parseTags(plain);
+    let saved;
+    if (existingItem) {
+      saved = await saveItem({ ...existingItem, title, content, tags });
+    } else {
+      saved = await saveItem(createItem({ layer: ItemLayer.BACKGROUND, type: ItemType.NOTE, title, content, tags }));
+    }
+    upsertItemInState(saved);
+    showToast(existingItem ? 'Note updated' : 'Note saved');
+    close();
+  });
+
+  setTimeout(() => { body.focus(); placeCaretAtEnd(body); }, 380);
+}
+
+function placeCaretAtEnd(el) {
+  try {
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    range.collapse(false);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  } catch {}
+}
+
+// ─── CODE EDITOR ──────────────────────────────────────────────
+function showCodeEditor(existingItem = null) {
+  document.getElementById('code-editor-page')?.remove();
+  const page = document.createElement('div');
+  page.className = 'editor-page code-editor-page';
+  page.id = 'code-editor-page';
+
+  const currentLang = existingItem?.language || 'javascript';
+  const currentCode = existingItem?.code || '';
+
+  page.innerHTML = `
+    <div class="editor-topbar code-topbar">
+      <button class="editor-back-btn" id="code-back">
+        <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <input class="code-filename-input" id="code-title" placeholder="filename.js"
+             value="${esc(existingItem?.title || '')}" autocomplete="off" spellcheck="false">
+      <button class="editor-save-btn" id="code-save">Save</button>
+    </div>
+
+    <div class="code-lang-strip" id="code-lang-strip">
+      ${LANGUAGES.map(l =>
+        `<button class="lang-tag ${l===currentLang?'active':''}" data-lang="${l}">${l}</button>`
+      ).join('')}
+    </div>
+
+    <div class="code-editor-frame">
+      <div class="code-gutter" id="code-gutter">
+        ${Array.from({length: Math.max(currentCode.split('\n').length, 20)}, (_, i) => `<div>${i+1}</div>`).join('')}
+      </div>
+      <textarea class="code-textarea" id="code-textarea"
+                placeholder="// Start coding…"
+                spellcheck="false"
+                autocomplete="off"
+                autocorrect="off"
+                autocapitalize="off">${esc(currentCode)}</textarea>
+    </div>
+
+    <div class="code-statusbar">
+      <span class="code-status-lang" id="code-status-lang">${currentLang}</span>
+      <span class="code-status-pos"  id="code-status-pos">Ln 1, Col 1</span>
+      <button class="code-copy-btn" id="code-copy">
+        <svg viewBox="0 0 24 24" width="13" height="13"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+        Copy
+      </button>
+    </div>
+  `;
+
+  document.body.appendChild(page);
+  requestAnimationFrame(() => page.classList.add('open'));
+
+  let selectedLang = currentLang;
+  const textarea = page.querySelector('#code-textarea');
+  const gutter   = page.querySelector('#code-gutter');
+
+  function updateGutter() {
+    const lines = Math.max(textarea.value.split('\n').length, 20);
+    const current = gutter.children.length;
+    if (lines > current) {
+      const frag = document.createDocumentFragment();
+      for (let i = current + 1; i <= lines; i++) {
+        const d = document.createElement('div'); d.textContent = i;
+        frag.appendChild(d);
+      }
+      gutter.appendChild(frag);
+    } else if (lines < current) {
+      while (gutter.children.length > lines) gutter.lastChild.remove();
+    }
+  }
+
+  function updatePos() {
+    const val = textarea.value;
+    const pos = textarea.selectionStart;
+    const lines = val.substring(0, pos).split('\n');
+    page.querySelector('#code-status-pos').textContent =
+      `Ln ${lines.length}, Col ${lines[lines.length-1].length + 1}`;
+  }
+
+  textarea.addEventListener('input', () => { updateGutter(); updatePos(); });
+  textarea.addEventListener('click', updatePos);
+  textarea.addEventListener('keyup', updatePos);
+  textarea.addEventListener('scroll', () => { gutter.scrollTop = textarea.scrollTop; });
+
+  textarea.addEventListener('keydown', e => {
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      const s = textarea.selectionStart, end = textarea.selectionEnd;
+      textarea.value = textarea.value.substring(0, s) + '  ' + textarea.value.substring(end);
+      textarea.selectionStart = textarea.selectionEnd = s + 2;
+      updateGutter();
+    }
+    // Auto-close brackets/quotes
+    const pairs = { '(':')', '[':']', '{':'}', '"':'"', "'":"'", '`':'`' };
+    if (pairs[e.key]) {
+      e.preventDefault();
+      const s = textarea.selectionStart, end = textarea.selectionEnd;
+      const selected = textarea.value.substring(s, end);
+      textarea.value = textarea.value.substring(0, s) + e.key + selected + pairs[e.key] + textarea.value.substring(end);
+      textarea.selectionStart = textarea.selectionEnd = s + 1;
+    }
+  });
+
+  page.querySelector('#code-lang-strip').addEventListener('click', e => {
+    const tag = e.target.closest('.lang-tag');
+    if (!tag) return;
+    page.querySelectorAll('.lang-tag').forEach(t => t.classList.remove('active'));
+    tag.classList.add('active');
+    selectedLang = tag.dataset.lang;
+    page.querySelector('#code-status-lang').textContent = selectedLang;
+  });
+
+  page.querySelector('#code-copy').addEventListener('click', () => {
+    navigator.clipboard?.writeText(textarea.value)
+      .then(() => showToast('Copied to clipboard'))
+      .catch(() => showToast('Copy failed', true));
+  });
+
+  const close = () => {
+    page.classList.remove('open');
+    setTimeout(() => page.remove(), 320);
+  };
+
+  page.querySelector('#code-back').addEventListener('click', close);
+
+  page.querySelector('#code-save').addEventListener('click', async () => {
+    const title = page.querySelector('#code-title').value.trim();
+    const code  = textarea.value;
+    if (!title && !code.trim()) { close(); return; }
+    let saved;
+    if (existingItem) {
+      saved = await saveItem({ ...existingItem, title, code, language: selectedLang });
+    } else {
+      saved = await saveItem(createItem({ layer: ItemLayer.BACKGROUND, type: ItemType.CODE, title, code, language: selectedLang }));
+    }
+    upsertItemInState(saved);
+    showToast(existingItem ? 'Code updated' : 'Code saved');
+    close();
+  });
+
+  setTimeout(() => textarea.focus(), 380);
+}
+
+// ─── LINK MODAL ───────────────────────────────────────────────
+function showLinkModal(existingItem = null) {
+  openModal({
+    title: existingItem ? 'Edit Link' : 'Add Link',
+    fields: [
+      { type:'input', id:'f-url',   placeholder:'https://…',      value: existingItem?.url   || '' },
+      { type:'input', id:'f-title', placeholder:'Label (optional)',value: existingItem?.title || '' },
+    ],
+    actions: existingItem
+      ? [{ id:'m-delete', label:'Delete', danger:true }, { id:'m-cancel', label:'Cancel' }, { id:'m-save', label:'Save', primary:true }]
+      : [{ id:'m-cancel', label:'Cancel' }, { id:'m-save', label:'Save', primary:true }],
+    onReady: (overlay, close) => {
+      overlay.querySelector('#m-cancel').addEventListener('click', close);
+      overlay.querySelector('#m-delete')?.addEventListener('click', async () => {
+        await deleteItem(existingItem.id); removeItemFromState(existingItem.id); close();
+      });
+      overlay.querySelector('#m-save').addEventListener('click', async () => {
+        const url   = overlay.querySelector('#f-url')?.value.trim()   || '';
+        const title = overlay.querySelector('#f-title')?.value.trim() || '';
+        if (!url) { showToast('URL is required', true); return; }
+        let saved;
+        if (existingItem) {
+          saved = await saveItem({ ...existingItem, url, title });
+        } else {
+          saved = await saveItem(createItem({ layer: ItemLayer.BACKGROUND, type: ItemType.LINK, url, title }));
+        }
+        upsertItemInState(saved);
+        showToast(existingItem ? 'Link updated' : 'Link saved');
+        close();
+      });
+    },
+  });
+}
+
+// ─── STICKY MODAL ─────────────────────────────────────────────
+function showStickyModal() {
+  let col = STICKY_COLORS[Math.floor(Math.random()*STICKY_COLORS.length)];
+  openModal({
+    title: 'New Sticky',
+    fields: [
+      { type:'textarea', id:'f-text',  placeholder:'Write something…', rows:4 },
+      { type:'swatches', id:'f-color', value: col },
+    ],
+    actions: [{ id:'m-cancel', label:'Cancel' }, { id:'m-save', label:'Add Sticky', primary:true }],
+    onReady: (overlay, close) => {
+      overlay.querySelectorAll('.color-swatch').forEach(sw => {
+        sw.addEventListener('click', () => {
+          overlay.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
+          sw.classList.add('selected'); col = sw.dataset.color;
+        });
+      });
+      overlay.querySelector('#m-cancel').addEventListener('click', close);
+      overlay.querySelector('#m-save').addEventListener('click', async () => {
+        const text = overlay.querySelector('#f-text')?.value || '';
+        const item = createItem({
+          layer: ItemLayer.STICKY, type: ItemType.STICKY, text, color: col,
+          rotation: parseFloat((Math.random()*8-4).toFixed(1)),
+          position: { x: 50+Math.random()*120, y: 30+Math.random()*100, width: 175, height: 150 },
+        });
+        upsertItemInState(await saveItem(item));
+        close();
+      });
+    },
+  });
+}
+
+// ─── SETTINGS MODAL ───────────────────────────────────────────
+function showSettingsModal() {
+  openModal({
+    title: 'Settings', fields: [],
+    actions: [{ id:'s-export', label:'↓ Export' }, { id:'s-import', label:'↑ Import' }, { id:'s-close', label:'Close', primary:true }],
+    onReady: (overlay, close) => {
+      overlay.querySelector('#s-close').addEventListener('click', close);
+      overlay.querySelector('#s-export').addEventListener('click', exportData);
+      overlay.querySelector('#s-import').addEventListener('click', importData);
+    },
+  });
 }
 
 // ─── DRAWER ───────────────────────────────────────────────────
@@ -392,12 +803,10 @@ function showDrawer() {
   if (document.getElementById('drawer')) return;
 
   const overlay = document.createElement('div');
-  overlay.className = 'drawer-overlay';
-  overlay.id        = 'drawer-overlay';
+  overlay.className = 'drawer-overlay'; overlay.id = 'drawer-overlay';
 
   const drawer = document.createElement('div');
-  drawer.className = 'drawer opening';
-  drawer.id        = 'drawer';
+  drawer.className = 'drawer opening'; drawer.id = 'drawer';
 
   drawer.innerHTML = `
     <div class="drawer-header">
@@ -405,19 +814,18 @@ function showDrawer() {
       <div class="drawer-subtitle">Your personal command center</div>
     </div>
     <div class="drawer-body">
-
       <div class="drawer-section-label">Organise</div>
 
       <div class="drawer-toggle-row" id="ambient-row">
         <span class="drawer-toggle-label">🌙 Ambient sorting</span>
-        <button class="mini-toggle ${state.ambientEnabled?'on':''}" id="ambient-mini-toggle" aria-label="Toggle ambient">
+        <button class="mini-toggle ${state.ambientEnabled?'on':''}" id="ambient-mini-toggle" aria-label="Ambient">
           <div class="mini-toggle-knob"></div>
         </button>
       </div>
 
-      <div class="drawer-toggle-row" id="filter-row">
-        <span class="drawer-toggle-label">⭐ Show favourites only</span>
-        <button class="mini-toggle ${state.filterFavourites?'on':''}" id="fav-filter-toggle" aria-label="Toggle favourites filter">
+      <div class="drawer-toggle-row">
+        <span class="drawer-toggle-label">⭐ Favourites only</span>
+        <button class="mini-toggle ${state._data.filterFavourites?'on':''}" id="fav-toggle" aria-label="Favourites">
           <div class="mini-toggle-knob"></div>
         </button>
       </div>
@@ -429,10 +837,9 @@ function showDrawer() {
         <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
         <span class="drawer-item-label">Search</span>
       </button>
-
       <button class="drawer-item" id="drawer-sort">
         <svg viewBox="0 0 24 24"><path d="M3 6h18M7 12h10M11 18h2"/></svg>
-        <span class="drawer-item-label">Sort by: ${sortLabel()}</span>
+        <span class="drawer-item-label">Sort: ${sortLabel()}</span>
       </button>
 
       <div class="drawer-divider"></div>
@@ -442,12 +849,10 @@ function showDrawer() {
         <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         <span class="drawer-item-label">Export data</span>
       </button>
-
       <button class="drawer-item" id="drawer-import">
         <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
         <span class="drawer-item-label">Import data</span>
       </button>
-
     </div>
   `;
 
@@ -455,15 +860,13 @@ function showDrawer() {
   document.body.appendChild(drawer);
 
   const close = () => {
-    drawer.classList.remove('opening');
-    drawer.classList.add('closing');
+    drawer.classList.remove('opening'); drawer.classList.add('closing');
     overlay.style.animation = 'fade-in 200ms ease reverse both';
     setTimeout(() => { drawer.remove(); overlay.remove(); }, 250);
   };
 
   overlay.addEventListener('click', close);
 
-  // Ambient toggle
   document.getElementById('ambient-mini-toggle').addEventListener('click', e => {
     e.stopPropagation();
     state.ambientEnabled = !state.ambientEnabled;
@@ -471,28 +874,21 @@ function showDrawer() {
     state.ambientEnabled ? startAmbient() : stopAmbient();
   });
 
-  // Favourites filter toggle
-  document.getElementById('fav-filter-toggle').addEventListener('click', e => {
+  document.getElementById('fav-toggle').addEventListener('click', e => {
     e.stopPropagation();
     state._data.filterFavourites = !state._data.filterFavourites;
     e.currentTarget.classList.toggle('on', state._data.filterFavourites);
     state._notify();
   });
 
-  // Search
   document.getElementById('drawer-search').addEventListener('click', () => { close(); setTimeout(showSearch, 300); });
-
-  // Sort
   document.getElementById('drawer-sort').addEventListener('click', () => {
     close();
     setTimeout(() => {
-      const btn = document.getElementById('burger-btn') || document.body;
-      const r   = btn.getBoundingClientRect();
+      const r = (document.getElementById('burger-btn') || document.body).getBoundingClientRect();
       showSortMenuAt(r.right - 190, r.bottom + 8);
     }, 300);
   });
-
-  // Export / import
   document.getElementById('drawer-export').addEventListener('click', () => { close(); setTimeout(exportData, 300); });
   document.getElementById('drawer-import').addEventListener('click', () => { close(); setTimeout(importData, 300); });
 }
@@ -507,7 +903,7 @@ function showSortMenuAt(left, top) {
   document.getElementById('sort-menu')?.remove();
   const menu = document.createElement('div');
   menu.id = 'sort-menu'; menu.className = 'sort-menu-popup';
-  menu.style.top = `${top}px`; menu.style.left = `${Math.max(8, left)}px`;
+  menu.style.top = `${top}px`; menu.style.left = `${Math.max(8,left)}px`;
 
   const fields = [
     { field:'updatedAt', label:'Date modified' },
@@ -525,9 +921,7 @@ function showSortMenuAt(left, top) {
   `;
   document.body.appendChild(menu);
 
-  const dismiss = e => {
-    if (!menu.contains(e.target)) { menu.remove(); document.removeEventListener('click', dismiss); }
-  };
+  const dismiss = e => { if (!menu.contains(e.target)) { menu.remove(); document.removeEventListener('click', dismiss); } };
   setTimeout(() => document.addEventListener('click', dismiss), 50);
 
   menu.querySelectorAll('.sort-menu-item').forEach(btn => {
@@ -543,7 +937,6 @@ function showSortMenuAt(left, top) {
 // ─── SEARCH ───────────────────────────────────────────────────
 function showSearch() {
   if (document.getElementById('search-overlay')) return;
-
   const overlay = document.createElement('div');
   overlay.id = 'search-overlay'; overlay.className = 'search-overlay';
   overlay.innerHTML = `
@@ -551,7 +944,7 @@ function showSearch() {
       <button class="search-cancel-btn" id="search-cancel">
         <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
       </button>
-      <input id="search-input" type="text" placeholder="Search notes, code, links…" autocomplete="off">
+      <input id="search-input" type="text" placeholder="Search…" autocomplete="off">
     </div>
     <div class="search-filter-chips">
       <button class="search-filter-chip" data-type="note">Notes</button>
@@ -573,14 +966,14 @@ function showSearch() {
   let aType = null, aTime = null;
 
   const run = () => {
-    const q    = input.value.trim().toLowerCase();
-    const now  = Date.now();
-    let   res  = state.backgroundItems;
+    const q   = input.value.trim().toLowerCase();
+    const now = Date.now();
+    let   res = state.backgroundItems;
     if (aType) res = res.filter(i => i.type === aType);
     if (aTime) res = res.filter(i => (i.createdAt||0) >= now - aTime);
     if (q)     res = res.filter(i =>
       (i.title||'').toLowerCase().includes(q) ||
-      (i.content||'').toLowerCase().includes(q) ||
+      (i.content||'').replace(/<[^>]*>/g,'').toLowerCase().includes(q) ||
       (i.code||'').toLowerCase().includes(q) ||
       (i.url||'').toLowerCase().includes(q) ||
       (i.tags||[]).some(t => t.toLowerCase().includes(q))
@@ -592,18 +985,22 @@ function showSearch() {
     el.innerHTML = res.map(item => `
       <div class="card search-result-card" data-id="${item.id}" style="min-height:auto">
         <div class="card-header"><span class="card-type-label">${item.type}: ${esc(item.title||'Untitled')}</span></div>
-        <div class="card-content">${esc((item.content||item.code||item.url||'').slice(0,120))}</div>
+        <div class="card-content">${esc((item.content||item.code||item.url||'').replace(/<[^>]*>/g,'').slice(0,120))}</div>
       </div>
     `).join('');
     el.querySelectorAll('.card[data-id]').forEach(c => {
       c.addEventListener('click', () => {
         const item = state.backgroundItems.find(i => i.id === +c.dataset.id);
-        if (item) { close(); showEditModal(item); }
+        if (!item) return;
+        closeSearch();
+        if      (item.type === 'note') showNoteEditor(item);
+        else if (item.type === 'code') showCodeEditor(item);
+        else                           showLinkModal(item);
       });
     });
   };
 
-  const close = () => {
+  const closeSearch = () => {
     overlay.classList.remove('open');
     setTimeout(() => overlay.remove(), 350);
   };
@@ -611,31 +1008,30 @@ function showSearch() {
   input.addEventListener('input', run);
   overlay.querySelectorAll('.search-filter-chip').forEach(chip => {
     chip.addEventListener('click', () => {
+      chip.classList.toggle('active');
       if (chip.dataset.type) {
-        chip.classList.toggle('active');
         overlay.querySelectorAll('.search-filter-chip[data-type]').forEach(c => { if (c!==chip) c.classList.remove('active'); });
         aType = chip.classList.contains('active') ? chip.dataset.type : null;
       } else {
-        chip.classList.toggle('active');
         overlay.querySelectorAll('.search-filter-chip[data-time]').forEach(c => { if (c!==chip) c.classList.remove('active'); });
         aTime = chip.classList.contains('active') ? +chip.dataset.time : null;
       }
       run();
     });
   });
-  document.getElementById('search-cancel').addEventListener('click', close);
+  document.getElementById('search-cancel').addEventListener('click', closeSearch);
 }
 
 // ─── CONTEXT MENU ─────────────────────────────────────────────
 function showContextMenu(evt, item) {
-  document.getElementById('context-menu-overlay')?.remove();
-  document.getElementById('context-menu')?.remove();
+  document.getElementById('ctx-overlay')?.remove();
+  document.getElementById('ctx-menu')?.remove();
 
   const overlay = document.createElement('div');
-  overlay.id = 'context-menu-overlay'; overlay.className = 'context-menu-overlay';
+  overlay.id = 'ctx-overlay'; overlay.className = 'context-menu-overlay';
 
   const menu = document.createElement('div');
-  menu.id = 'context-menu'; menu.className = 'context-menu';
+  menu.id = 'ctx-menu'; menu.className = 'context-menu';
 
   menu.innerHTML = [
     { label: item.isFavorited ? '♡ Unfavorite' : '♡ Favorite', action:'favorite' },
@@ -663,7 +1059,9 @@ function showContextMenu(evt, item) {
     btn.addEventListener('click', async () => {
       dismiss();
       if (btn.dataset.action === 'edit') {
-        showEditModal(item);
+        if      (item.type === 'note') showNoteEditor(item);
+        else if (item.type === 'code') showCodeEditor(item);
+        else                           showLinkModal(item);
       } else if (btn.dataset.action === 'favorite') {
         item.isFavorited = !item.isFavorited;
         upsertItemInState(await saveItem(item));
@@ -705,137 +1103,15 @@ function openModal({ title, fields, actions, onReady }) {
   requestAnimationFrame(() => overlay.classList.add('open'));
 
   const close = () => { overlay.classList.remove('open'); setTimeout(() => overlay.remove(), 220); };
-  overlay.addEventListener('click', e => { if (e.target===overlay) close(); });
+  overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
   if (onReady) onReady(overlay, close);
   return { overlay, close };
 }
 
-// ─── CREATE ───────────────────────────────────────────────────
-function showCreateModal(type) {
-  const cfgs = {
-    note: { title:'New Note', fields:[
-      { type:'input',    id:'f-title',   placeholder:'Title' },
-      { type:'textarea', id:'f-content', placeholder:'Content…', rows:7 },
-    ]},
-    code: { title:'New Code Snippet', fields:[
-      { type:'input',    id:'f-title', placeholder:'Title' },
-      { type:'textarea', id:'f-code',  placeholder:'Code…', rows:8 },
-      { type:'select',   id:'f-lang',  value:'javascript',
-        options:['javascript','python','html','css','typescript','bash','json'].map(l=>({value:l,label:l})) },
-    ]},
-    link: { title:'Add Link', fields:[
-      { type:'input', id:'f-url',   placeholder:'https://…' },
-      { type:'input', id:'f-title', placeholder:'Label (optional)' },
-    ]},
-  };
-  const { title, fields } = cfgs[type];
-  openModal({ title, fields,
-    actions:[{ id:'modal-cancel', label:'Cancel' },{ id:'modal-save', label:'Save', primary:true }],
-    onReady:(overlay, close) => {
-      overlay.querySelector('#modal-cancel').addEventListener('click', close);
-      overlay.querySelector('#modal-save').addEventListener('click', async () => {
-        const item = createItem({ layer:ItemLayer.BACKGROUND, type });
-        if (type==='note') {
-          item.title   = overlay.querySelector('#f-title')?.value || '';
-          item.content = overlay.querySelector('#f-content')?.value || '';
-          item.tags    = parseTags(item.content);
-        } else if (type==='code') {
-          item.title    = overlay.querySelector('#f-title')?.value || '';
-          item.code     = overlay.querySelector('#f-code')?.value  || '';
-          item.language = overlay.querySelector('#f-lang')?.value  || 'javascript';
-        } else {
-          item.url   = overlay.querySelector('#f-url')?.value   || '';
-          item.title = overlay.querySelector('#f-title')?.value || '';
-        }
-        if (item.title||item.content||item.code||item.url) upsertItemInState(await saveItem(item));
-        close();
-      });
-    },
-  });
-}
-
-// ─── EDIT ─────────────────────────────────────────────────────
-function showEditModal(item) {
-  const cfgs = {
-    note: { title:'Edit Note', fields:[
-      { type:'input',    id:'f-title',   placeholder:'Title',    value:item.title||'' },
-      { type:'textarea', id:'f-content', placeholder:'Content…', value:item.content||'', rows:7 },
-    ], collect: o => ({ title:o.querySelector('#f-title')?.value||'', content:o.querySelector('#f-content')?.value||'', tags:parseTags(o.querySelector('#f-content')?.value||'') }) },
-    code: { title:'Edit Code', fields:[
-      { type:'input',    id:'f-title', placeholder:'Title', value:item.title||'' },
-      { type:'textarea', id:'f-code',  placeholder:'Code…', value:item.code||'', rows:8 },
-      { type:'select',   id:'f-lang',  value:item.language||'javascript',
-        options:['javascript','python','html','css','typescript','bash','json'].map(l=>({value:l,label:l})) },
-    ], collect: o => ({ title:o.querySelector('#f-title')?.value||'', code:o.querySelector('#f-code')?.value||'', language:o.querySelector('#f-lang')?.value||'javascript' }) },
-    link: { title:'Edit Link', fields:[
-      { type:'input', id:'f-url',   placeholder:'https://…',       value:item.url||'' },
-      { type:'input', id:'f-title', placeholder:'Label (optional)', value:item.title||'' },
-    ], collect: o => ({ url:o.querySelector('#f-url')?.value||'', title:o.querySelector('#f-title')?.value||'' }) },
-  };
-  const cfg = cfgs[item.type]; if (!cfg) return;
-
-  openModal({ title:cfg.title, fields:cfg.fields,
-    actions:[{ id:'modal-delete', label:'Delete', danger:true },{ id:'modal-cancel', label:'Cancel' },{ id:'modal-save', label:'Save', primary:true }],
-    onReady:(overlay, close) => {
-      overlay.querySelector('#modal-cancel').addEventListener('click', close);
-      overlay.querySelector('#modal-delete').addEventListener('click', async () => {
-        await deleteItem(item.id); removeItemFromState(item.id); close();
-      });
-      overlay.querySelector('#modal-save').addEventListener('click', async () => {
-        upsertItemInState(await saveItem({ ...item, ...cfg.collect(overlay) })); close();
-      });
-    },
-  });
-}
-
-// ─── STICKY MODAL ─────────────────────────────────────────────
-function showStickyModal() {
-  let col = STICKY_COLORS[Math.floor(Math.random()*STICKY_COLORS.length)];
-  openModal({ title:'New Sticky',
-    fields:[
-      { type:'textarea', id:'f-text',  placeholder:'Write something…', rows:4 },
-      { type:'swatches', id:'f-color', value:col },
-    ],
-    actions:[{ id:'modal-cancel', label:'Cancel' },{ id:'modal-save', label:'Add Sticky', primary:true }],
-    onReady:(overlay, close) => {
-      overlay.querySelectorAll('.color-swatch').forEach(sw => {
-        sw.addEventListener('click', () => {
-          overlay.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
-          sw.classList.add('selected'); col = sw.dataset.color;
-        });
-      });
-      overlay.querySelector('#modal-cancel').addEventListener('click', close);
-      overlay.querySelector('#modal-save').addEventListener('click', async () => {
-        const item = createItem({
-          layer:ItemLayer.STICKY, type:ItemType.STICKY,
-          text:  overlay.querySelector('#f-text')?.value || '',
-          color: col,
-          rotation: parseFloat((Math.random()*8-4).toFixed(1)),
-          position: { x:50+Math.random()*120, y:30+Math.random()*100, width:160, height:130 },
-        });
-        upsertItemInState(await saveItem(item));
-        renderStickies(); close();
-      });
-    },
-  });
-}
-
-// ─── SETTINGS MODAL ───────────────────────────────────────────
-function showSettingsModal() {
-  openModal({ title:'Settings', fields:[],
-    actions:[{ id:'export-btn', label:'↓ Export' },{ id:'import-btn', label:'↑ Import' },{ id:'close-btn', label:'Close', primary:true }],
-    onReady:(overlay, close) => {
-      overlay.querySelector('#close-btn').addEventListener('click', close);
-      overlay.querySelector('#export-btn').addEventListener('click', exportData);
-      overlay.querySelector('#import-btn').addEventListener('click', importData);
-    },
-  });
-}
-
 // ─── AMBIENT ──────────────────────────────────────────────────
-function initAmbient() { if (state.ambientEnabled) startAmbient(); }
-function startAmbient()  { sortByTime(); clearInterval(ambientInterval); ambientInterval = setInterval(sortByTime, 3_600_000); }
-function stopAmbient()   { clearInterval(ambientInterval); ambientInterval = null; }
+function initAmbient()  { if (state.ambientEnabled) startAmbient(); }
+function startAmbient() { sortByTime(); clearInterval(ambientInterval); ambientInterval = setInterval(sortByTime, 3_600_000); }
+function stopAmbient()  { clearInterval(ambientInterval); ambientInterval = null; }
 function sortByTime() {
   const h = new Date().getHours();
   const p = h>=5&&h<12 ? 'note' : h>=12&&h<18 ? 'link' : 'code';
@@ -846,7 +1122,10 @@ function sortByTime() {
 // ─── EXPORT / IMPORT ──────────────────────────────────────────
 function exportData() {
   const blob = new Blob([JSON.stringify([...state.backgroundItems,...state.stickyItems],null,2)],{type:'application/json'});
-  const a = Object.assign(document.createElement('a'),{ href:URL.createObjectURL(blob), download:`make-backup-${new Date().toISOString().slice(0,10)}.json` });
+  const a = Object.assign(document.createElement('a'),{
+    href: URL.createObjectURL(blob),
+    download: `make-backup-${new Date().toISOString().slice(0,10)}.json`,
+  });
   a.click(); URL.revokeObjectURL(a.href);
   showToast('Data exported');
 }
@@ -859,7 +1138,7 @@ function importData() {
       try {
         const items = JSON.parse(ev.target.result);
         for (const item of items) { delete item.id; upsertItemInState(await saveItem(item)); }
-        renderStickies(); showToast('Data imported');
+        showToast('Data imported');
         document.getElementById('modal-overlay')?.remove();
       } catch { showToast('Invalid file', true); }
     };
@@ -886,9 +1165,9 @@ function parseTags(text='') {
 function relativeDate(ts) {
   if (!ts) return '';
   const d = new Date(ts), now = new Date(), diff = now-d;
-  if (diff<60_000)    return 'just now';
-  if (diff<3_600_000) return `${Math.floor(diff/60_000)}m ago`;
-  if (diff<86_400_000)return `${Math.floor(diff/3_600_000)}h ago`;
+  if (diff<60_000)     return 'just now';
+  if (diff<3_600_000)  return `${Math.floor(diff/60_000)}m ago`;
+  if (diff<86_400_000) return `${Math.floor(diff/3_600_000)}h ago`;
   if (diff<604_800_000)return `${Math.floor(diff/86_400_000)}d ago`;
   return d.toLocaleDateString(undefined,{month:'short',day:'numeric'});
 }
