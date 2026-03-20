@@ -76,12 +76,15 @@ function buildShell() {
     <div class="app-header">
       <div class="header-row">
 
-        <div class="date-widget" id="date-widget" aria-hidden="true">
-          <div class="date-widget-date">${date}</div>
-          <div class="date-widget-day">${day}</div>
-        </div>
+        <button class="burger-btn" id="burger-btn" aria-label="Menu">
+          <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
 
         <div class="header-right">
+          <div class="date-widget" id="date-widget" aria-hidden="true">
+            <div class="date-widget-date">${date}</div>
+            <div class="date-widget-day">${day}</div>
+          </div>
           <button class="toggle-track ${isDark ? 'on' : ''}" id="theme-toggle" aria-label="Toggle theme">
             <div class="toggle-knob"></div>
           </button>
@@ -90,17 +93,6 @@ function buildShell() {
       </div>
       <h1 class="app-title">Maké</h1>
       <p class="app-subtitle">Your personal command center</p>
-    </div>
-
-    <div class="header-toolbar">
-      <button class="burger-btn" id="burger-btn" aria-label="Menu">
-        <svg viewBox="0 0 24 24"><line x1="3" y1="6"  x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-      </button>
-      <div class="divider-group">
-        <div class="divider-line" style="width:86px"></div>
-        <div class="divider-line" style="width:64px"></div>
-        <div class="divider-line" style="width:46px"></div>
-      </div>
     </div>
 
     <div class="canvas">
@@ -334,6 +326,9 @@ function attachShellListeners() {
 
   // Theme toggle
   document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
+
+  // Burger opens drawer
+  document.getElementById('burger-btn').addEventListener('click', showDrawer);
 
   // Refresh date widget every minute so it stays accurate
   setInterval(() => {

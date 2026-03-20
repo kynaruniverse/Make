@@ -95,41 +95,40 @@ body {
   width: 100%; margin-bottom: 2px;
 }
 
-/* DATE WIDGET — display only, Canva echo effect */
+/* DATE WIDGET — compact pill top-right, display only, 2-layer Canva echo */
 .date-widget {
-  width: 150px; min-height: 72px;
   background: var(--rose);
-  border-radius: var(--r-xl);
-  padding: 10px 14px 12px;
+  border-radius: var(--r-lg);
+  padding: 6px 12px 8px;
   display: flex; flex-direction: column;
-  justify-content: center; gap: 3px;
+  justify-content: center; gap: 1px;
   flex-shrink: 0;
-  /* Non-interactive */
   pointer-events: none;
   cursor: default;
   user-select: none;
-  /* Canva echo effect — 3 progressively offset sage-toned layers */
+  /* 2-layer echo: sage-toned offsets that blend with background */
   box-shadow:
-    4px  4px  0px 0px #7a8f8d,
-    8px  8px  0px 0px #6b7e7c,
-    12px 12px 0px 0px #5c6e6c,
-    0 6px 20px rgba(0,0,0,0.22);
+    4px  4px  0px 0px #7a8c8a,
+    8px  8px  0px 0px rgba(107,124,122,0.55),
+    0 4px 12px rgba(0,0,0,0.18);
   color: white;
   text-align: left;
 }
 .date-widget-date {
-  font-size: 10.5px; font-weight: 500;
-  color: rgba(255,255,255,0.72);
+  font-size: 9px; font-weight: 500;
+  color: rgba(255,255,255,0.75);
   letter-spacing: 0.3px; line-height: 1;
+  white-space: nowrap;
 }
 .date-widget-day {
   font-family: var(--font-display);
-  font-size: 21px; font-weight: 700; font-style: italic;
-  color: white; line-height: 1.1; letter-spacing: -0.5px;
+  font-size: 15px; font-weight: 700; font-style: italic;
+  color: white; line-height: 1.1; letter-spacing: -0.3px;
+  white-space: nowrap;
 }
 
 /* THEME TOGGLE — top right */
-.header-right { display:flex; align-items:center; gap:10px; padding-top:5px; }
+.header-right { display:flex; align-items:center; gap:10px; }
 .toggle-track {
   width:58px; height:30px;
   background: rgba(30,30,30,0.50);
@@ -161,18 +160,6 @@ body {
   font-size: 16px; font-weight: 400;
   color: rgba(255,255,255,0.88);
   text-align: center; margin-top: 3px; margin-bottom: 2px;
-}
-
-/* ── TOOLBAR ROW (burger left + divider lines right) ── */
-.header-toolbar {
-  display: flex; align-items: center;
-  justify-content: space-between;
-  width: 100%; padding: 6px 18px 8px; flex-shrink: 0;
-}
-.divider-group { display:flex; flex-direction:column; gap:4px; align-items: flex-end; }
-.divider-line {
-  height: 3px; border-radius: 2px;
-  background: var(--rose);
 }
 
 .burger-btn {
