@@ -391,11 +391,6 @@ body{display:flex;flex-direction:column;}
 /* ─── ELEMENT REGISTRY ─── */
 /* sel = CSS selector that matches the real element in the live DOM above */
 const ELS=[
-  {id:'app-bg',   label:'App background',  desc:'Sage bg colour',       sel:'#app',
-   pos:[],
-   size:[],
-   style:[{k:'background',cv:'--sage',label:'Background',type:'color',def:'#9ba59a'}]},
-
   {id:'header',   label:'Header area',     desc:'Top section',          sel:'.app-header',
    pos:[{k:'padding-top',label:'Pad top',def:14,min:0,max:60},
         {k:'padding-bottom',label:'Pad bottom',def:4,min:0,max:40}],
@@ -466,6 +461,12 @@ const ELS=[
    size:[{k:'border-radius',label:'Radius',def:12,min:0,max:24},
          {k:'padding',label:'Padding',def:9,min:4,max:20}],
    style:[]},
+
+  // app-bg last — it is the catch-all container, must lose to all specifics
+  {id:'app-bg',   label:'App background',  desc:'Sage bg colour',       sel:'#app',
+   pos:[],
+   size:[],
+   style:[{k:'background',cv:'--sage',label:'Background',type:'color',def:'#9ba59a'}]},
 ];
 
 const TOKENS=[
@@ -596,13 +597,22 @@ function onTapUp() {
 
 /* find which registry element a DOM node belongs to */
 function findElByNode(node) {
-  for(const el of ELS) {
-    try {
-      const matches=document.querySelectorAll(el.sel);
-      for(const m of matches) {
-        if(m===node||m.contains(node)) return el;
-      }
-    } catch {}
+  // Walk up from the tapped node — most specific first, skip app-bg fallback
+  let cursor = node;
+  while (cursor && cursor !== document.body) {
+    for (const el of ELS) {
+      if (el.id === "app-bg") continue;
+      try { if (cursor.matches(el.sel)) return el; } catch {}
+    }
+    cursor = cursor.parentElement;
+  }
+  // Fallback: include app-bg
+  cursor = node;
+  while (cursor && cursor !== document.body) {
+    for (const el of ELS) {
+      try { if (cursor.matches(el.sel)) return el; } catch {}
+    }
+    cursor = cursor.parentElement;
   }
   return null;
 }
