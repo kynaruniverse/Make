@@ -1,935 +1,851 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
-  <title>Maké — Layout Editor</title>
-  <style>
-    :root {
-      --rose:     #b68d93;
-      --rose-d:   #9e7279;
-      --sage:     #9ba59a;
-      --sage-d:   #6b7c7a;
-      --dark:     #2a2a2a;
-      --panel:    #1a1f1e;
-      --surface:  #242a29;
-      --surface2: #2e3634;
-      --border:   rgba(255,255,255,0.10);
-      --text:     #e8eeec;
-      --muted:    #8aada8;
-      --gold:     #e8b89f;
-    }
-    *,*::before,*::after { margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent; }
-    html,body { height:100%;overflow:hidden;font-family:'Inter',-apple-system,sans-serif;background:var(--panel);color:var(--text);user-select:none; }
-    body { display:flex;flex-direction:column; }
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
+<title>Maké — Layout Editor</title>
+<style>
+:root {
+  --rose:#b68d93;--rose-d:#9e7279;--sage:#9ba59a;--sage-d:#6b7c7a;
+  --panel:#161b1a;--surf:#1e2524;--surf2:#252e2c;
+  --border:rgba(255,255,255,0.09);--text:#e4eeec;--muted:#7a9e99;
+  --gold:#ddb896;--green:#7ec8a4;--ease:cubic-bezier(0.22,0.25,0,1);
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;overflow:hidden;font-family:'Inter',-apple-system,sans-serif;
+  background:var(--panel);color:var(--text);user-select:none;-webkit-user-select:none;}
+body{display:flex;flex-direction:column;}
 
-    /* ── TOP BAR ── */
-    #topbar {
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      padding: 8px 12px;
-      display: flex; align-items: center; gap: 8px;
-      flex-shrink: 0; flex-wrap: wrap; z-index: 100;
-    }
-    #topbar h1 { font-size:0.9rem;color:var(--gold);font-weight:700;white-space:nowrap;flex-shrink:0; }
-    #topbar .sep { width:1px;height:20px;background:var(--border);flex-shrink:0; }
-    .btn {
-      padding:6px 12px;border-radius:8px;border:none;
-      font-size:0.78rem;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;
-      transition:opacity 0.15s,transform 0.1s;
-    }
-    .btn:active { transform:scale(0.95); }
-    .btn-rose   { background:var(--rose);color:white; }
-    .btn-sage   { background:var(--sage-d);color:white; }
-    .btn-ghost  { background:rgba(255,255,255,0.08);color:var(--text);border:1px solid var(--border); }
-    .btn-gold   { background:var(--gold);color:#2a1a10; }
-    #hint { font-size:0.72rem;color:var(--muted);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+/* TOP BAR */
+#topbar{background:var(--surf);border-bottom:1px solid var(--border);
+  padding:max(10px,env(safe-area-inset-top)) 12px 10px;
+  display:flex;align-items:center;gap:6px;flex-shrink:0;z-index:200;}
+#topbar h1{font-size:0.85rem;color:var(--gold);font-weight:700;flex-shrink:0;margin-right:4px;}
+.btn{padding:7px 12px;border-radius:9px;border:none;font-size:0.74rem;font-weight:600;
+  cursor:pointer;white-space:nowrap;transition:transform 0.1s;-webkit-tap-highlight-color:transparent;}
+.btn:active{transform:scale(0.92);}
+.btn-rose{background:var(--rose);color:#fff;}
+.btn-sage{background:var(--sage-d);color:#fff;}
+.btn-ghost{background:rgba(255,255,255,0.08);color:var(--text);border:1px solid var(--border);}
+.btn-gold{background:var(--gold);color:#251606;}
+.btn-icon{width:36px;height:36px;padding:0;display:flex;align-items:center;justify-content:center;font-size:1rem;}
+.tb-right{display:flex;gap:5px;margin-left:auto;flex-shrink:0;}
 
-    /* ── MAIN LAYOUT ── */
-    #main { display:flex;flex:1;overflow:hidden;min-height:0; }
+/* PREVIEW */
+#preview-wrap{flex:1;position:relative;overflow:hidden;background:#0a0e0d;min-height:0;touch-action:none;}
+#preview-frame{border:none;width:100%;height:100%;display:block;}
 
-    /* ── PREVIEW IFRAME ── */
-    #preview-wrap {
-      flex:1;position:relative;overflow:hidden;background:#000;
-      touch-action:none;
-    }
-    #preview-frame {
-      border:none;width:390px;height:100%;max-height:100%;
-      display:block;
-      box-shadow:4px 0 32px rgba(0,0,0,0.5);
-    }
-    #preview-overlay {
-      position:absolute;top:0;left:0;width:390px;height:100%;
-      pointer-events:none;z-index:10;
-    }
-    /* highlight boxes drawn by JS over the iframe */
-    .hl-box {
-      position:absolute;pointer-events:none;
-      border:2px dashed var(--gold);
-      border-radius:4px;
-      background:rgba(232,184,159,0.08);
-      transition:all 0.15s;
-    }
-    .hl-box.selected {
-      border-color:var(--rose);border-style:solid;
-      background:rgba(182,141,147,0.14);
-    }
-    .hl-label {
-      position:absolute;top:-18px;left:0;
-      background:var(--gold);color:#2a1a10;
-      font-size:9px;font-weight:700;padding:1px 5px;
-      border-radius:3px;white-space:nowrap;pointer-events:none;
-    }
+/* OVERLAY — sits above iframe for interaction */
+#overlay{position:absolute;inset:0;z-index:50;pointer-events:none;touch-action:none;}
+#overlay.active{pointer-events:auto;}
 
-    /* ── SIDE PANEL ── */
-    #panel {
-      width:260px;flex-shrink:0;
-      background:var(--surface);
-      border-left:1px solid var(--border);
-      display:flex;flex-direction:column;overflow:hidden;
-    }
-    #panel-tabs {
-      display:flex;border-bottom:1px solid var(--border);flex-shrink:0;
-    }
-    .tab {
-      flex:1;padding:9px 2px;text-align:center;
-      font-size:0.62rem;font-weight:700;cursor:pointer;
-      color:var(--muted);border-bottom:2px solid transparent;
-      text-transform:uppercase;letter-spacing:0.05em;transition:color 0.15s;
-    }
-    .tab.active { color:var(--gold);border-bottom-color:var(--gold); }
-    #panel-body { flex:1;overflow-y:auto;padding:10px; }
-    #panel-body::-webkit-scrollbar { width:3px; }
-    #panel-body::-webkit-scrollbar-thumb { background:var(--border);border-radius:4px; }
+/* selection ring */
+#ring{position:absolute;display:none;pointer-events:none;}
+.ring-border{position:absolute;inset:0;border:2px solid var(--rose);border-radius:6px;
+  background:rgba(182,141,147,0.10);}
+.ring-lbl{position:absolute;top:-22px;left:0;background:var(--rose);color:#fff;
+  font-size:9px;font-weight:700;padding:2px 7px;border-radius:4px;white-space:nowrap;}
+.drag-h{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:44px;height:44px;background:rgba(182,141,147,0.25);border:2px solid rgba(182,141,147,0.7);
+  border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:18px;cursor:grab;pointer-events:auto;display:none;}
+.drag-h:active{cursor:grabbing;}
+.corner-h{position:absolute;width:16px;height:16px;background:var(--gold);
+  border-radius:3px;pointer-events:auto;display:none;}
+.corner-h.br{bottom:-8px;right:-8px;cursor:nwse-resize;}
+.corner-h.bl{bottom:-8px;left:-8px;cursor:nesw-resize;}
 
-    /* ── ELEMENT LIST ── */
-    .el-row {
-      background:var(--panel);border:1.5px solid var(--border);
-      border-radius:8px;padding:8px 10px;margin-bottom:5px;cursor:pointer;
-      transition:border-color 0.15s,background 0.15s;
-    }
-    .el-row:hover { border-color:rgba(232,184,159,0.4);background:rgba(232,184,159,0.04); }
-    .el-row.sel { border-color:var(--rose);background:rgba(182,141,147,0.08); }
-    .el-row-name { font-size:0.82rem;font-weight:600; }
-    .el-row-desc { font-size:0.68rem;color:var(--muted);margin-top:2px; }
+/* floating pill */
+#pill{position:absolute;top:10px;left:50%;transform:translateX(-50%);
+  background:rgba(22,27,26,0.9);backdrop-filter:blur(8px);
+  border:1px solid var(--border);border-radius:20px;
+  padding:5px 16px;font-size:0.7rem;color:var(--gold);
+  pointer-events:none;z-index:60;white-space:nowrap;
+  transition:opacity 0.3s;opacity:0;}
+#pill.vis{opacity:1;}
 
-    /* ── PROPERTY CONTROLS ── */
-    .pg-title {
-      font-size:0.62rem;text-transform:uppercase;letter-spacing:0.08em;
-      color:var(--muted);margin:12px 0 6px;padding-bottom:3px;
-      border-bottom:1px solid var(--border);
-    }
-    .pg-title:first-child { margin-top:0; }
-    .pr { display:flex;align-items:center;gap:8px;margin-bottom:7px; }
-    .pl { font-size:0.7rem;color:var(--muted);width:72px;flex-shrink:0; }
-    .pi {
-      flex:1;background:var(--panel);border:1px solid var(--border);
-      border-radius:6px;color:var(--text);padding:5px 8px;
-      font-size:0.82rem;font-family:monospace;outline:none;
-      transition:border-color 0.15s;
-    }
-    .pi:focus { border-color:var(--rose); }
-    .pi-color { width:36px;height:30px;padding:2px 3px;cursor:pointer;border-radius:6px; }
-    .pi-range { -webkit-appearance:none;height:4px;border-radius:4px;background:var(--border);cursor:pointer; }
-    .pi-range::-webkit-slider-thumb { -webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--rose);cursor:pointer; }
-    .pi-range-row { display:flex;align-items:center;gap:8px;margin-bottom:7px; }
-    .pi-range-val { font-size:0.75rem;color:var(--gold);font-family:monospace;width:40px;text-align:right;flex-shrink:0; }
-    .nudge-row { display:flex;gap:4px;margin-bottom:7px; }
-    .nudge-btn { flex:1;padding:7px 2px;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:0.9rem;cursor:pointer;text-align:center;transition:background 0.1s; }
-    .nudge-btn:active { background:rgba(182,141,147,0.3); }
-    .reset-btn { width:100%;padding:8px;margin-top:4px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:7px;color:var(--muted);font-size:0.78rem;cursor:pointer;transition:background 0.15s; }
-    .reset-btn:hover { background:rgba(255,255,255,0.08); }
+/* coord display */
+#coord{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);
+  background:rgba(22,27,26,0.9);backdrop-filter:blur(6px);
+  border:1px solid var(--border);border-radius:20px;
+  padding:4px 14px;font-size:0.68rem;color:var(--gold);
+  font-family:monospace;pointer-events:none;z-index:60;
+  opacity:0;transition:opacity 0.2s;white-space:nowrap;}
+#coord.vis{opacity:1;}
 
-    /* ── DIFF / CSS PANE ── */
-    #css-out {
-      background:var(--panel);border:1px solid var(--border);
-      border-radius:6px;padding:10px;font-size:0.67rem;
-      font-family:monospace;color:#86efac;white-space:pre-wrap;
-      overflow:auto;line-height:1.6;max-height:100%;
-      word-break:break-all;
-    }
-    .css-added   { color:#86efac; }
-    .css-section { color:#7dd3fc;font-weight:bold; }
+/* BOTTOM SHEET */
+#sheet{position:relative;flex-shrink:0;background:var(--surf);
+  border-top:1px solid var(--border);display:flex;flex-direction:column;
+  height:52px;transition:height 0.32s var(--ease);z-index:100;
+  padding-bottom:env(safe-area-inset-bottom);}
+#sheet.open{height:min(64vh,480px);}
 
-    /* ── STATUS BAR ── */
-    #statusbar {
-      background:var(--surface);border-top:1px solid var(--border);
-      padding:4px 12px;font-size:0.7rem;color:var(--muted);
-      flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-    }
+#sh-handle{display:flex;align-items:center;height:52px;padding:0 14px;gap:10px;cursor:pointer;flex-shrink:0;}
+#sh-pill{width:40px;height:4px;border-radius:2px;background:rgba(255,255,255,0.18);flex-shrink:0;}
+#sh-name{font-size:0.82rem;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#sh-hint{font-size:0.7rem;color:var(--muted);flex-shrink:0;}
 
-    /* ── TOAST ── */
-    #toast {
-      position:fixed;bottom:28px;left:50%;
-      transform:translateX(-50%) translateY(60px);
-      background:var(--rose);color:white;
-      padding:7px 18px;border-radius:20px;
-      font-size:0.82rem;font-weight:600;
-      transition:transform 0.22s var(--ease);z-index:9999;pointer-events:none;
-      --ease: cubic-bezier(0.22,0.25,0,1);
-    }
-    #toast.up { transform:translateX(-50%) translateY(0); }
+#sh-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;
+  overflow-x:auto;scrollbar-width:none;display:none;}
+#sh-tabs::-webkit-scrollbar{display:none;}
+.stab{padding:8px 14px;font-size:0.62rem;font-weight:700;text-transform:uppercase;
+  letter-spacing:0.05em;color:var(--muted);border-bottom:2px solid transparent;
+  cursor:pointer;white-space:nowrap;flex-shrink:0;transition:color 0.15s;}
+.stab.on{color:var(--gold);border-bottom-color:var(--gold);}
 
-    /* ── MOBILE ── */
-    @media(max-width:680px){
-      #main { flex-direction:column-reverse; }
-      #panel { width:100%;height:50%;border-left:none;border-top:1px solid var(--border); }
-      #preview-frame { width:100%;height:100%; }
-      #preview-overlay { width:100%; }
-    }
-  </style>
+#sh-body{flex:1;overflow-y:auto;padding:12px 14px 20px;display:none;
+  -webkit-overflow-scrolling:touch;}
+#sh-body::-webkit-scrollbar{width:3px;}
+#sh-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+
+/* pane helpers */
+.sec{font-size:0.6rem;text-transform:uppercase;letter-spacing:0.08em;
+  color:var(--muted);margin:12px 0 6px;padding-bottom:3px;
+  border-bottom:1px solid var(--border);}
+.sec:first-child{margin-top:0;}
+
+/* XY grid */
+.xy-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;}
+.xy-cell{display:flex;flex-direction:column;gap:3px;}
+.xy-lbl{font-size:0.62rem;color:var(--muted);text-align:center;}
+.xy-inp{background:var(--panel);border:1px solid var(--border);border-radius:7px;
+  color:var(--text);padding:8px 6px;font-size:0.85rem;font-family:monospace;
+  text-align:center;outline:none;width:100%;
+  -webkit-user-select:text;user-select:text;transition:border-color 0.15s;}
+.xy-inp:focus{border-color:var(--rose);}
+
+/* D-pad */
+.dpad{display:grid;grid-template-columns:repeat(3,44px);grid-template-rows:repeat(3,44px);
+  gap:5px;margin:8px auto 10px;width:fit-content;}
+.dp{width:44px;height:44px;border-radius:9px;border:1px solid var(--border);
+  background:rgba(255,255,255,0.05);color:var(--text);font-size:1.1rem;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:background 0.1s;-webkit-tap-highlight-color:transparent;}
+.dp:active{background:rgba(182,141,147,0.30);}
+.dp-center{background:rgba(255,255,255,0.03);font-size:0.65rem;color:var(--muted);cursor:default;}
+.step-row{display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:8px;}
+.step-row span{font-size:0.7rem;color:var(--muted);}
+.sopt{padding:5px 10px;border-radius:6px;border:1px solid var(--border);
+  background:rgba(255,255,255,0.05);color:var(--muted);font-size:0.72rem;cursor:pointer;
+  transition:background 0.1s;}
+.sopt.on{background:var(--rose);color:#fff;border-color:var(--rose);}
+
+/* range rows */
+.rrow{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.rlbl{font-size:0.7rem;color:var(--muted);width:72px;flex-shrink:0;line-height:1.3;}
+.rng{-webkit-appearance:none;flex:1;height:5px;border-radius:3px;background:var(--border);cursor:pointer;}
+.rng::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;
+  border-radius:50%;background:var(--rose);cursor:pointer;}
+.rval{font-size:0.72rem;color:var(--gold);font-family:monospace;width:42px;text-align:right;flex-shrink:0;}
+
+/* colour rows */
+.crow{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+.clbl{font-size:0.7rem;color:var(--muted);width:72px;flex-shrink:0;}
+.csw{width:36px;height:32px;border-radius:6px;padding:2px 3px;cursor:pointer;flex-shrink:0;}
+.cinp{flex:1;background:var(--panel);border:1px solid var(--border);border-radius:6px;
+  color:var(--text);padding:6px 7px;font-size:0.72rem;font-family:monospace;outline:none;
+  -webkit-user-select:text;user-select:text;transition:border-color 0.15s;}
+.cinp:focus{border-color:var(--rose);}
+
+/* token rows */
+.trow{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+.tsw{width:34px;height:34px;border-radius:7px;border:none;cursor:pointer;flex-shrink:0;}
+.tinfo{flex:1;min-width:0;}
+.tname{font-size:0.76rem;font-weight:600;}
+.thint{font-size:0.62rem;color:var(--muted);}
+.tval{width:80px;background:var(--panel);border:1px solid var(--border);border-radius:6px;
+  color:var(--text);padding:5px 6px;font-size:0.68rem;font-family:monospace;outline:none;
+  flex-shrink:0;-webkit-user-select:text;user-select:text;}
+.tval:focus{border-color:var(--rose);}
+
+/* elements list */
+.eli{background:var(--panel);border:1.5px solid var(--border);
+  border-radius:8px;padding:10px 12px;margin-bottom:6px;cursor:pointer;
+  transition:border-color 0.15s;}
+.eli:active,.eli.on{border-color:var(--rose);background:rgba(182,141,147,0.07);}
+.eli-n{font-size:0.82rem;font-weight:600;}
+.eli-d{font-size:0.66rem;color:var(--muted);margin-top:2px;}
+
+/* css pane */
+#css-out{background:var(--panel);border:1px solid var(--border);border-radius:6px;
+  padding:10px;font-size:0.65rem;font-family:monospace;color:#86efac;
+  white-space:pre-wrap;line-height:1.6;word-break:break-all;min-height:60px;}
+.css-btns{display:flex;gap:8px;margin-top:8px;}
+
+.rbtn{width:100%;padding:9px;margin-top:8px;background:rgba(255,255,255,0.04);
+  border:1px solid var(--border);border-radius:8px;color:var(--muted);
+  font-size:0.76rem;cursor:pointer;transition:background 0.15s;}
+.rbtn:active{background:rgba(255,255,255,0.09);}
+
+/* toast */
+#toast{position:fixed;bottom:70px;left:50%;
+  transform:translateX(-50%) translateY(40px);
+  background:var(--rose);color:#fff;padding:8px 20px;border-radius:20px;
+  font-size:0.82rem;font-weight:600;transition:transform 0.22s var(--ease);
+  z-index:9999;pointer-events:none;white-space:nowrap;
+  box-shadow:0 4px 18px rgba(0,0,0,0.4);}
+#toast.up{transform:translateX(-50%) translateY(0);}
+</style>
 </head>
 <body>
 
 <div id="topbar">
   <h1>✦ Maké Editor</h1>
-  <div class="sep"></div>
-  <button class="btn btn-rose"  id="btn-apply">▶ Apply</button>
-  <button class="btn btn-gold"  id="btn-copy">📋 Copy CSS</button>
-  <button class="btn btn-sage"  id="btn-dl">⬇ Download styles.css</button>
-  <button class="btn btn-ghost" id="btn-reset">↺ Reset all</button>
-  <div id="hint">Select an element to edit its layout and colours</div>
-</div>
-
-<div id="main">
-  <div id="preview-wrap">
-    <iframe id="preview-frame" src="index.html" sandbox="allow-scripts allow-same-origin"></iframe>
-    <div id="preview-overlay"></div>
-  </div>
-
-  <div id="panel">
-    <div id="panel-tabs">
-      <div class="tab active" data-tab="elements">Elements</div>
-      <div class="tab"        data-tab="props">Properties</div>
-      <div class="tab"        data-tab="colours">Colours</div>
-      <div class="tab"        data-tab="css">CSS Diff</div>
-    </div>
-    <div id="panel-body">
-      <div id="pane-elements"></div>
-      <div id="pane-props"   style="display:none"><p style="color:var(--muted);font-size:0.8rem;margin-top:8px">Select an element first.</p></div>
-      <div id="pane-colours" style="display:none"></div>
-      <div id="pane-css"     style="display:none"><pre id="css-out">No changes yet.</pre></div>
-    </div>
+  <div class="tb-right">
+    <button class="btn btn-icon btn-rose" id="btn-sel" title="Select mode">☝</button>
+    <button class="btn btn-icon btn-ghost" id="btn-drg" title="Drag mode">✥</button>
+    <button class="btn btn-gold" id="btn-copy">Copy</button>
+    <button class="btn btn-sage" id="btn-dl">↓ CSS</button>
+    <button class="btn btn-icon btn-ghost" id="btn-rst" title="Reset all">↺</button>
   </div>
 </div>
 
-<div id="statusbar">Ready — select an element from the list or click directly in the preview</div>
-<div id="toast">Done!</div>
+<div id="preview-wrap">
+  <iframe id="preview-frame" src="index.html" sandbox="allow-scripts allow-same-origin"></iframe>
+  <div id="overlay">
+    <div id="ring">
+      <div class="ring-border"></div>
+      <div class="ring-lbl" id="ring-lbl"></div>
+      <div class="drag-h" id="drag-h">✥</div>
+      <div class="corner-h br" id="c-br"></div>
+      <div class="corner-h bl" id="c-bl"></div>
+    </div>
+  </div>
+  <div id="pill"></div>
+  <div id="coord"></div>
+</div>
+
+<div id="sheet">
+  <div id="sh-handle">
+    <div id="sh-pill"></div>
+    <span id="sh-name">Tap an element in the preview</span>
+    <span id="sh-hint">↑</span>
+  </div>
+  <div id="sh-tabs">
+    <div class="stab on"  data-s="pos">Position</div>
+    <div class="stab"     data-s="size">Size</div>
+    <div class="stab"     data-s="style">Style</div>
+    <div class="stab"     data-s="list">Elements</div>
+    <div class="stab"     data-s="tok">Colours</div>
+    <div class="stab"     data-s="css">CSS</div>
+  </div>
+  <div id="sh-body">
+    <div id="p-pos"></div>
+    <div id="p-size"  style="display:none"></div>
+    <div id="p-style" style="display:none"></div>
+    <div id="p-list"  style="display:none"></div>
+    <div id="p-tok"   style="display:none"></div>
+    <div id="p-css"   style="display:none">
+      <pre id="css-out">No changes yet.</pre>
+      <div class="css-btns">
+        <button class="btn btn-gold" style="flex:1" id="btn-copy2">📋 Copy CSS</button>
+        <button class="btn btn-sage" style="flex:1" id="btn-dl2">⬇ Save file</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
 
 <script>
-/* ═══════════════════════════════════════════════════════
-   MAKÉ LAYOUT EDITOR
-   
-   How it works:
-   1. Loads index.html in an iframe
-   2. Waits for the iframe to load, then injects a picker
-      script into it so clicks in the preview highlight elements
-   3. The ELEMENTS list shows every editable CSS component
-   4. Selecting one shows property controls (spacing, size,
-      border-radius, font-size, colours)
-   5. All changes are stored as a delta map over the original CSS vars
-   6. Apply: injects <style> overrides into the iframe live
-   7. Copy / Download: outputs the full modified styles.css
-      with all overrides merged in
-   ═══════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════
+   MAKÉ LAYOUT EDITOR V2  — mobile-first
+   ══════════════════════════════════════════════ */
 
-/* ─── EDITABLE ELEMENT REGISTRY ─── */
-/* Each entry maps to a real CSS selector in styles.css.
-   "props" lists what controls to show. */
-const ELEMENTS = [
-  {
-    id:    'app-bg',
-    label: 'App background',
-    desc:  'Main sage green background colour',
-    sel:   'body, #app',
-    props: [
-      { key:'background', label:'Background',  type:'color', cssVar:'--sage', default:'#9ba59a' },
-    ]
-  },
-  {
-    id:    'header',
-    label: 'Header area',
-    desc:  'Top section padding & spacing',
-    sel:   '.app-header',
-    props: [
-      { key:'padding-top',    label:'Top pad',    type:'px', default:14, min:0, max:40 },
-      { key:'padding-bottom', label:'Bot pad',    type:'px', default:4,  min:0, max:40 },
-    ]
-  },
-  {
-    id:    'app-title',
-    label: 'Title — Maké',
-    desc:  'The big italic serif heading',
-    sel:   '.app-title',
-    props: [
-      { key:'font-size',    label:'Font size',    type:'px',    default:52, min:24, max:80 },
-      { key:'color',        label:'Colour',       type:'color', default:'#ffffff' },
-      { key:'letter-spacing',label:'Tracking',   type:'em',    default:-0.03, min:-0.1, max:0.1, step:0.005 },
-      { key:'margin-top',   label:'Top margin',  type:'px',    default:-4, min:-20, max:20 },
-    ]
-  },
-  {
-    id:    'app-subtitle',
-    label: 'Subtitle',
-    desc:  '"Your personal command center"',
-    sel:   '.app-subtitle',
-    props: [
-      { key:'font-size',   label:'Font size', type:'px',    default:16, min:10, max:28 },
-      { key:'color',       label:'Colour',    type:'color', default:'rgba(255,255,255,0.88)' },
-      { key:'margin-top',  label:'Top margin',type:'px',    default:3,  min:-10, max:20 },
-    ]
-  },
-  {
-    id:    'date-widget',
-    label: 'Date widget (pill)',
-    desc:  'Pink date pill top-right',
-    sel:   '.date-widget',
-    props: [
-      { key:'background',    label:'Background', type:'color', cssVar:'--rose',   default:'#b68d93' },
-      { key:'border-radius', label:'Radius',     type:'px',    default:16, min:0, max:40 },
-      { key:'padding-top',   label:'Pad top',    type:'px',    default:6,  min:0, max:20 },
-      { key:'padding-bottom',label:'Pad bottom', type:'px',    default:8,  min:0, max:20 },
-      { key:'padding-left',  label:'Pad left',   type:'px',    default:12, min:0, max:24 },
-      { key:'padding-right', label:'Pad right',  type:'px',    default:12, min:0, max:24 },
-    ]
-  },
-  {
-    id:    'date-day',
-    label: 'Date — day name',
-    desc:  'The italic "Friday" text',
-    sel:   '.date-widget-day',
-    props: [
-      { key:'font-size',   label:'Font size', type:'px', default:15, min:8, max:32 },
-      { key:'color',       label:'Colour',    type:'color', default:'#ffffff' },
-    ]
-  },
-  {
-    id:    'date-date',
-    label: 'Date — date string',
-    desc:  'The "20 March 2026" small text',
-    sel:   '.date-widget-date',
-    props: [
-      { key:'font-size', label:'Font size', type:'px', default:9, min:6, max:18 },
-      { key:'color',     label:'Colour',    type:'color', default:'rgba(255,255,255,0.75)' },
-    ]
-  },
-  {
-    id:    'burger-btn',
-    label: 'Burger button',
-    desc:  'Pink menu button top-left',
-    sel:   '.burger-btn',
-    props: [
-      { key:'background',    label:'Background', type:'color', cssVar:'--rose', default:'#b68d93' },
-      { key:'width',         label:'Width',      type:'px', default:44, min:28, max:64 },
-      { key:'height',        label:'Height',     type:'px', default:44, min:28, max:64 },
-      { key:'border-radius', label:'Radius',     type:'px', default:12, min:0, max:24 },
-    ]
-  },
-  {
-    id:    'cards',
-    label: 'Cards',
-    desc:  'Dark note/code/link cards in the grid',
-    sel:   '.card',
-    props: [
-      { key:'background',    label:'Background', type:'color', cssVar:'--dark-card', default:'#3e3e3e' },
-      { key:'border-radius', label:'Radius',     type:'px', default:16, min:0, max:28 },
-      { key:'padding',       label:'Padding',    type:'px', default:11, min:4, max:24 },
-      { key:'min-height',    label:'Min height', type:'px', default:170, min:80, max:320 },
-      { key:'gap',           label:'Gap',        type:'px', default:4, min:0, max:16 },
-    ]
-  },
-  {
-    id:    'card-grid',
-    label: 'Card grid',
-    desc:  'The 3-column grid layout',
-    sel:   '.grid',
-    props: [
-      { key:'gap', label:'Gap between cards', type:'px', default:10, min:2, max:24 },
-      { key:'--grid-cols', label:'Columns', type:'select', options:['1','2','3','4'], default:'3',
-        cssProp:'grid-template-columns', cssTemplate:'repeat(VAL,1fr)' }
-    ]
-  },
-  {
-    id:    'card-label',
-    label: 'Card — type label',
-    desc:  '"Note: build plan" header text',
-    sel:   '.card-type-label',
-    props: [
-      { key:'font-size', label:'Font size', type:'px', default:10.5, min:8, max:16 },
-      { key:'color',     label:'Colour',    type:'color', default:'rgba(255,255,255,0.90)' },
-    ]
-  },
-  {
-    id:    'card-content',
-    label: 'Card — content text',
-    desc:  'Monospace preview text inside cards',
-    sel:   '.card-content',
-    props: [
-      { key:'font-size', label:'Font size', type:'px', default:10, min:7, max:14 },
-      { key:'color',     label:'Colour',    type:'color', default:'rgba(255,255,255,0.56)' },
-    ]
-  },
-  {
-    id:    'bottom-nav',
-    label: 'Bottom nav bar',
-    desc:  'Navigation bar at the bottom',
-    sel:   '.bottom-nav',
-    props: [
-      { key:'background',    label:'Background', type:'color', cssVar:'--sage-deeper', default:'#6b7c7a' },
-      { key:'padding-top',   label:'Pad top',    type:'px', default:8,  min:0, max:24 },
-      { key:'padding-bottom',label:'Pad bottom', type:'px', default:22, min:0, max:40 },
-    ]
-  },
-  {
-    id:    'fab',
-    label: 'FAB (+ button)',
-    desc:  'Centre rose add button in nav',
-    sel:   '.nav-btn-fab',
-    props: [
-      { key:'background',    label:'Background', type:'color', cssVar:'--rose', default:'#b68d93' },
-      { key:'width',         label:'Width',      type:'px', default:52, min:36, max:72 },
-      { key:'height',        label:'Height',     type:'px', default:52, min:36, max:72 },
-      { key:'border-radius', label:'Radius',     type:'px', default:20, min:0, max:36 },
-      { key:'margin-top',    label:'Lift (neg)', type:'px', default:-10, min:-24, max:0 },
-    ]
-  },
-  {
-    id:    'nav-icons',
-    label: 'Nav icons',
-    desc:  'Inactive nav icon colour',
-    sel:   '.nav-btn',
-    props: [
-      { key:'color', label:'Icon colour', type:'color', default:'rgba(255,255,255,0.52)' },
-    ]
-  },
-  {
-    id:    'sticky-note',
-    label: 'Sticky notes',
-    desc:  'Floating draggable sticky notes',
-    sel:   '.sticky-note',
-    props: [
-      { key:'border-radius', label:'Radius',    type:'px', default:12, min:0, max:24 },
-      { key:'padding',       label:'Padding',   type:'px', default:9,  min:4, max:20 },
-    ]
-  },
+/* ─── REGISTRY ─── */
+const ELS = [
+  { id:'app-bg',    label:'App background',   desc:'Sage bg colour',     sel:'body, #app',
+    pos:[], size:[], style:[{k:'background',cv:'--sage',label:'Background',type:'color',def:'#9ba59a'}] },
+
+  { id:'header',    label:'Header area',       desc:'Top section spacing', sel:'.app-header',
+    pos:[{k:'padding-top',label:'Pad top',def:14,min:0,max:60},
+         {k:'padding-bottom',label:'Pad bottom',def:4,min:0,max:40}],
+    size:[], style:[] },
+
+  { id:'title',     label:'Title — Maké',      desc:'Big italic heading',  sel:'.app-title',
+    pos:[{k:'margin-top',label:'Top margin',def:-4,min:-40,max:40}],
+    size:[{k:'font-size',label:'Font size',def:52,min:20,max:90}],
+    style:[{k:'color',label:'Colour',type:'color',def:'#ffffff'},
+           {k:'letter-spacing',label:'Tracking',type:'em',def:-0.03,min:-0.1,max:0.1,step:0.005}] },
+
+  { id:'subtitle',  label:'Subtitle',          desc:'"Your personal command center"', sel:'.app-subtitle',
+    pos:[{k:'margin-top',label:'Top margin',def:3,min:-10,max:30},
+         {k:'margin-bottom',label:'Bottom margin',def:2,min:0,max:30}],
+    size:[{k:'font-size',label:'Font size',def:16,min:10,max:28}],
+    style:[{k:'color',label:'Colour',type:'color',def:'rgba(255,255,255,0.88)'}] },
+
+  { id:'dw',        label:'Date widget',        desc:'Pink date pill',      sel:'.date-widget',
+    pos:[],
+    size:[{k:'padding-top',label:'Pad top',def:6,min:0,max:20},
+          {k:'padding-bottom',label:'Pad bottom',def:8,min:0,max:20},
+          {k:'padding-left',label:'Pad left',def:12,min:0,max:24},
+          {k:'padding-right',label:'Pad right',def:12,min:0,max:24},
+          {k:'border-radius',label:'Radius',def:16,min:0,max:32}],
+    style:[{k:'background',cv:'--rose',label:'Background',type:'color',def:'#b68d93'}] },
+
+  { id:'dw-day',    label:'Date — day name',    desc:'Italic "Friday"',     sel:'.date-widget-day',
+    pos:[], size:[{k:'font-size',label:'Font size',def:15,min:8,max:28}],
+    style:[{k:'color',label:'Colour',type:'color',def:'#ffffff'}] },
+
+  { id:'dw-date',   label:'Date — date text',   desc:'"20 March 2026"',     sel:'.date-widget-date',
+    pos:[], size:[{k:'font-size',label:'Font size',def:9,min:6,max:16}],
+    style:[{k:'color',label:'Colour',type:'color',def:'rgba(255,255,255,0.75)'}] },
+
+  { id:'burger',    label:'Burger button',       desc:'Pink menu btn',       sel:'.burger-btn',
+    pos:[],
+    size:[{k:'width',label:'Width',def:44,min:28,max:70},
+          {k:'height',label:'Height',def:44,min:28,max:70},
+          {k:'border-radius',label:'Radius',def:12,min:0,max:28}],
+    style:[{k:'background',cv:'--rose',label:'Background',type:'color',def:'#b68d93'}] },
+
+  { id:'cards',     label:'Cards',               desc:'Note/code/link cards', sel:'.card',
+    pos:[],
+    size:[{k:'border-radius',label:'Radius',def:16,min:0,max:28},
+          {k:'padding',label:'Padding',def:11,min:4,max:24},
+          {k:'min-height',label:'Min height',def:170,min:60,max:320},
+          {k:'gap',label:'Gap',def:4,min:0,max:16}],
+    style:[{k:'background',cv:'--dark-card',label:'Background',type:'color',def:'#3e3e3e'}] },
+
+  { id:'grid',      label:'Card grid',            desc:'Column layout',       sel:'.grid',
+    pos:[], size:[{k:'gap',label:'Gap',def:10,min:2,max:28}], style:[] },
+
+  { id:'card-lbl',  label:'Card type label',      desc:'"Note: title"',       sel:'.card-type-label',
+    pos:[], size:[{k:'font-size',label:'Font size',def:10.5,min:8,max:16}],
+    style:[{k:'color',label:'Colour',type:'color',def:'rgba(255,255,255,0.90)'}] },
+
+  { id:'card-cnt',  label:'Card content text',    desc:'Monospace preview',   sel:'.card-content',
+    pos:[], size:[{k:'font-size',label:'Font size',def:10,min:7,max:14}],
+    style:[{k:'color',label:'Colour',type:'color',def:'rgba(255,255,255,0.56)'}] },
+
+  { id:'nav',       label:'Bottom nav bar',       desc:'Navigation bar',      sel:'.bottom-nav',
+    pos:[{k:'padding-top',label:'Pad top',def:8,min:0,max:24},
+         {k:'padding-bottom',label:'Pad bottom',def:22,min:0,max:50}],
+    size:[], style:[{k:'background',cv:'--sage-deeper',label:'Background',type:'color',def:'#6b7c7a'}] },
+
+  { id:'fab',       label:'FAB — + button',       desc:'Centre add button',   sel:'.nav-btn-fab',
+    pos:[{k:'margin-top',label:'Lift upward',def:-10,min:-30,max:0}],
+    size:[{k:'width',label:'Width',def:52,min:36,max:72},
+          {k:'height',label:'Height',def:52,min:36,max:72},
+          {k:'border-radius',label:'Radius',def:20,min:0,max:36}],
+    style:[{k:'background',cv:'--rose',label:'Background',type:'color',def:'#b68d93'}] },
+
+  { id:'nav-i',     label:'Nav icons',            desc:'Inactive icon colour', sel:'.nav-btn',
+    pos:[], size:[], style:[{k:'color',label:'Colour',type:'color',def:'rgba(255,255,255,0.52)'}] },
+
+  { id:'sticky',    label:'Sticky notes',         desc:'Draggable stickies',  sel:'.sticky-note',
+    pos:[],
+    size:[{k:'border-radius',label:'Radius',def:12,min:0,max:24},
+          {k:'padding',label:'Padding',def:9,min:4,max:20}],
+    style:[] },
+
+  { id:'modal',     label:'Modals',               desc:'Dialog boxes',        sel:'.modal',
+    pos:[],
+    size:[{k:'border-radius',label:'Radius',def:24,min:0,max:36}],
+    style:[{k:'background',label:'Background',type:'color',def:'#3a3a3a'}] },
 ];
 
-/* ─── GLOBAL COLOUR TOKENS ─── */
-const COLOR_TOKENS = [
-  { varName:'--rose',       label:'Rose (accent)',    default:'#b68d93', hint:'Burger btn, FAB, tags, dividers' },
-  { varName:'--rose-dark',  label:'Rose dark',        default:'#9e7279', hint:'Active/pressed states' },
-  { varName:'--rose-light', label:'Rose light',       default:'#cdb0b5', hint:'Toggle knob' },
-  { varName:'--tan',        label:'Tan',              default:'#b6a486', hint:'Available for accents' },
-  { varName:'--sage',       label:'Sage (background)',default:'#9ba59a', hint:'Main app background' },
-  { varName:'--sage-dark',  label:'Sage dark',        default:'#7d8e8c', hint:'Secondary surfaces' },
-  { varName:'--sage-deeper',label:'Sage deeper',      default:'#6b7c7a', hint:'Nav bar background' },
-  { varName:'--dark',       label:'Dark',             default:'#444444', hint:'Base dark value' },
-  { varName:'--dark-card',  label:'Card background',  default:'#3e3e3e', hint:'All card backgrounds' },
-  { varName:'--dark-modal', label:'Modal background', default:'#3a3a3a', hint:'Modals, add menu' },
-  { varName:'--dark-drawer',label:'Drawer background',default:'#363636', hint:'Side drawer' },
+const TOKENS = [
+  {v:'--rose',       label:'Rose',          def:'#b68d93', hint:'Burger, FAB, tags'},
+  {v:'--rose-dark',  label:'Rose dark',     def:'#9e7279', hint:'Pressed states'},
+  {v:'--rose-light', label:'Rose light',    def:'#cdb0b5', hint:'Toggle knob'},
+  {v:'--tan',        label:'Tan',           def:'#b6a486', hint:'Accent colour'},
+  {v:'--sage',       label:'Sage (bg)',     def:'#9ba59a', hint:'App background'},
+  {v:'--sage-dark',  label:'Sage dark',     def:'#7d8e8c', hint:'Surfaces'},
+  {v:'--sage-deeper',label:'Sage deeper',   def:'#6b7c7a', hint:'Nav bar'},
+  {v:'--dark-card',  label:'Card bg',       def:'#3e3e3e', hint:'All cards'},
+  {v:'--dark-modal', label:'Modal bg',      def:'#3a3a3a', hint:'Modals'},
+  {v:'--dark-drawer',label:'Drawer bg',     def:'#363636', hint:'Drawer'},
 ];
 
 /* ─── STATE ─── */
-let activeTab    = 'elements';
-let selectedEl   = null;      // element registry entry
-let overrides    = {};         // { '.selector': { 'property': 'value' } }
-let tokenOverrides = {};       // { '--varName': '#hex' }
-let origCSS      = null;       // raw text of styles.css fetched on load
-let tt;
+let sel      = null;   // selected ELS entry
+let ovr      = {};     // {selector:{prop:val}}
+let tokOvr   = {};     // {'--var':'val'}
+let origCSS  = null;
+let mode     = 'select'; // 'select'|'drag'
+let stab     = 'pos';
+let step     = 2;
+let isDrag   = false, isResize = false;
+let dx0=0, dy0=0, mTop0=0, mLeft0=0, w0=0, h0=0;
+let tt, pt;
 
-const frame    = document.getElementById('preview-frame');
-const overlay  = document.getElementById('preview-overlay');
+const frame  = document.getElementById('preview-frame');
+const overlay= document.getElementById('overlay');
+const ring   = document.getElementById('ring');
+const ringLbl= document.getElementById('ring-lbl');
+const dragH  = document.getElementById('drag-h');
+const cBR    = document.getElementById('c-br');
+const cBL    = document.getElementById('c-bl');
+const coordEl= document.getElementById('coord');
+const pill   = document.getElementById('pill');
+const sheet  = document.getElementById('sheet');
+const shTabs = document.getElementById('sh-tabs');
+const shBody = document.getElementById('sh-body');
 
 /* ─── BOOT ─── */
 window.addEventListener('load', async () => {
-  buildElementList();
-  buildColourPanel();
-  await fetchOrigCSS();
-  frame.addEventListener('load', onFrameLoad);
-  setStatus('Preview loaded — select an element to edit');
+  buildListPane();
+  buildTokenPane();
+  setMode('select');
+  overlay.classList.add('active');
+  await fetchCSS();
+  frame.addEventListener('load', () => { injectFrame(); applyAll(); });
+  setupSheetDrag();
+
+  // Top buttons
+  document.getElementById('btn-sel').addEventListener('click',  () => setMode('select'));
+  document.getElementById('btn-drg').addEventListener('click',  () => { if(sel) setMode('drag'); else showPill('Select an element first'); });
+  document.getElementById('btn-rst').addEventListener('click',  resetAll);
+  document.getElementById('btn-copy').addEventListener('click', copyCSS);
+  document.getElementById('btn-dl').addEventListener('click',   dlCSS);
+  document.getElementById('btn-copy2').addEventListener('click',copyCSS);
+  document.getElementById('btn-dl2').addEventListener('click',  dlCSS);
+
+  // Sheet tabs
+  document.getElementById('sh-tabs').addEventListener('click', e => {
+    const t = e.target.closest('.stab'); if(t) switchStab(t.dataset.s);
+  });
+
+  // Sheet handle
+  document.getElementById('sh-handle').addEventListener('click', () => {
+    if(sheet.classList.contains('open')) closeSheet();
+    else if(sel) openSheet();
+  });
 });
 
-async function fetchOrigCSS() {
-  try {
-    const r = await fetch('./styles.css?_=' + Date.now());
-    origCSS  = await r.text();
-  } catch(e) {
-    origCSS = '/* Could not fetch styles.css */';
-    setStatus('⚠ Could not read styles.css — copy/download will use overrides only');
-  }
+async function fetchCSS() {
+  try { const r = await fetch('./styles.css?'+Date.now()); origCSS = await r.text(); }
+  catch { origCSS = null; }
 }
 
-function onFrameLoad() {
-  injectPickerIntoFrame();
-  applyAllToFrame();
+/* ─── MODE ─── */
+function setMode(m) {
+  mode = m;
+  document.getElementById('btn-sel').className = 'btn btn-icon ' + (m==='select'?'btn-rose':'btn-ghost');
+  document.getElementById('btn-drg').className = 'btn btn-icon ' + (m==='drag'  ?'btn-rose':'btn-ghost');
+  dragH.style.display  = m==='drag' ? 'flex' : 'none';
+  cBR.style.display    = m==='drag' ? 'block': 'none';
+  cBL.style.display    = m==='drag' ? 'block': 'none';
+  showPill(m==='select' ? '☝ Tap to select' : '✥ Drag the handle to move');
 }
 
-/* ─── INJECT CLICK-PICKER INTO IFRAME ─── */
-function injectPickerIntoFrame() {
+/* ─── FRAME ─── */
+function injectFrame() {
   try {
-    const fw = frame.contentWindow;
-    if (!fw) return;
-    // Listen for element clicks from iframe
-    fw.addEventListener('click', (e) => {
-      // Walk up to find a matching registry element
-      let node = e.target;
-      while (node && node !== fw.document.body) {
-        const match = findElementByNode(node, fw.document);
-        if (match) { selectElement(match); return; }
-        node = node.parentElement;
-      }
+    const fw = frame.contentWindow, doc = fw.document;
+    doc.addEventListener('click', e => {
+      if(mode !== 'select') return;
+      const el = findEl(e.target, doc);
+      if(el) { e.preventDefault(); e.stopPropagation(); selectEl(el); }
     }, true);
-  } catch(e) { /* cross-origin guard */ }
+    doc.addEventListener('touchstart', e => {
+      if(mode === 'select') {
+        const el = findEl(e.target, doc);
+        if(el) e.preventDefault();
+      }
+    }, {passive:false});
+  } catch(e) {}
 }
 
-function findElementByNode(node, doc) {
-  for (const el of ELEMENTS) {
+function findEl(node, doc) {
+  for(const el of ELS) {
     try {
-      const matches = doc.querySelectorAll(el.sel);
-      for (const m of matches) {
-        if (m === node || m.contains(node)) return el;
-      }
+      for(const m of doc.querySelectorAll(el.sel))
+        if(m===node||m.contains(node)) return el;
     } catch {}
   }
   return null;
 }
 
-/* ─── HIGHLIGHT OVERLAYS ─── */
-function drawHighlights() {
-  overlay.innerHTML = '';
-  if (!selectedEl) return;
-
+/* ─── RING ─── */
+function drawRing() {
+  if(!sel) { ring.style.display='none'; return; }
   try {
-    const fw    = frame.contentWindow;
-    const frect = frame.getBoundingClientRect();
-    const fdoc  = fw.document;
+    const doc  = frame.contentWindow.document;
+    const node = doc.querySelector(sel.sel);
+    if(!node) { ring.style.display='none'; return; }
+    const r = node.getBoundingClientRect();
+    ring.style.cssText = `display:block;position:absolute;left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;`;
+    ringLbl.textContent = sel.label;
+  } catch { ring.style.display='none'; }
+}
 
-    fdoc.querySelectorAll(selectedEl.sel).forEach(node => {
-      const r = node.getBoundingClientRect();
-      // getBoundingClientRect is relative to iframe's viewport
-      const box = document.createElement('div');
-      box.className = 'hl-box selected';
-      box.style.cssText = `left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;`;
-      const lbl = document.createElement('div');
-      lbl.className = 'hl-label';
-      lbl.textContent = selectedEl.label;
-      box.appendChild(lbl);
-      overlay.appendChild(box);
+/* ─── DRAG ON OVERLAY ─── */
+overlay.addEventListener('pointerdown', e => {
+  if(!sel || mode!=='drag') return;
+  e.preventDefault();
+  overlay.setPointerCapture(e.pointerId);
+
+  if(e.target===cBR||e.target===cBL||e.target.closest('#c-br')||e.target.closest('#c-bl')) {
+    isResize=true;
+    dx0=e.clientX; dy0=e.clientY;
+    try {
+      const n=frame.contentWindow.document.querySelector(sel.sel);
+      const r=n?.getBoundingClientRect();
+      w0=r?.width||100; h0=r?.height||100;
+    } catch { w0=100;h0=100; }
+    return;
+  }
+  if(e.target===dragH||e.target.closest('#drag-h')) {
+    isDrag=true;
+    dx0=e.clientX; dy0=e.clientY;
+    mTop0 = parseFloat(getOvr(sel.sel,'margin-top'))  || 0;
+    mLeft0= parseFloat(getOvr(sel.sel,'margin-left')) || 0;
+  }
+});
+
+overlay.addEventListener('pointermove', e => {
+  if(!sel || mode!=='drag' || (!isDrag&&!isResize)) return;
+  e.preventDefault();
+  const ddx=e.clientX-dx0, ddy=e.clientY-dy0;
+  if(isResize) {
+    const nw=Math.max(20,w0+ddx), nh=Math.max(20,h0+ddy);
+    setOvr(sel.sel,'width', nw+'px');
+    setOvr(sel.sel,'height',nh+'px');
+    showCoord(`w:${Math.round(nw)}  h:${Math.round(nh)}`);
+  } else {
+    const nmt=Math.round(mTop0+ddy), nml=Math.round(mLeft0+ddx);
+    setOvr(sel.sel,'margin-top', nmt+'px');
+    setOvr(sel.sel,'margin-left',nml+'px');
+    showCoord(`↕${nmt}px  ↔${nml}px`);
+    syncPosInputs();
+  }
+  applyAll(); drawRing();
+});
+
+overlay.addEventListener('pointerup', e => {
+  if(isDrag||isResize) { isDrag=isResize=false; updateCSSPane(); hideCoord(); }
+});
+overlay.addEventListener('pointercancel', ()=>{ isDrag=isResize=false; hideCoord(); });
+
+/* ─── SELECT ─── */
+function selectEl(el) {
+  sel = el;
+  document.querySelectorAll('.eli').forEach(r => r.classList.toggle('on', r.dataset.id===el.id));
+  document.getElementById('sh-name').textContent = el.label;
+  document.getElementById('sh-hint').textContent = '↓';
+  openSheet();
+  buildPosPane(); buildSizePane(); buildStylePane();
+  switchStab('pos');
+  drawRing();
+  showPill(el.label + ' selected');
+}
+
+/* ─── SHEET ─── */
+function openSheet() {
+  sheet.classList.add('open');
+  shTabs.style.display='flex';
+  shBody.style.display='block';
+}
+function closeSheet() {
+  sheet.classList.remove('open');
+  setTimeout(()=>{ if(!sheet.classList.contains('open')){ shTabs.style.display='none'; shBody.style.display='none'; }},330);
+}
+function setupSheetDrag() {
+  const h = document.getElementById('sh-handle');
+  let sy=0, sh0=0, dragging=false;
+  h.addEventListener('touchstart', e=>{ sy=e.touches[0].clientY; sh0=sheet.offsetHeight; dragging=true; },{passive:true});
+  document.addEventListener('touchmove', e=>{ if(!dragging)return; const dy=sy-e.touches[0].clientY; sheet.style.height=Math.max(52,Math.min(window.innerHeight*0.82,sh0+dy))+'px'; sheet.style.transition='none'; },{passive:true});
+  document.addEventListener('touchend', ()=>{ if(!dragging)return; dragging=false; sheet.style.transition=''; if(sheet.offsetHeight<100) closeSheet(); else sheet.classList.add('open'); });
+}
+
+function switchStab(s) {
+  stab=s;
+  document.querySelectorAll('.stab').forEach(t=>t.classList.toggle('on',t.dataset.s===s));
+  ['pos','size','style','list','tok','css'].forEach(id=>{
+    document.getElementById('p-'+id).style.display=id===s?'':'none';
+  });
+  if(s==='css') updateCSSPane();
+}
+
+/* ─── POSITION PANE ─── */
+function buildPosPane() {
+  const p = document.getElementById('p-pos');
+  p.innerHTML='';
+  if(!sel) return;
+
+  // XY inputs
+  p.appendChild(mkSec('Position (margin offset)'));
+  const g = document.createElement('div'); g.className='xy-grid';
+  [
+    {id:'xy-mt',label:'↕ Y (Top)',  prop:'margin-top'},
+    {id:'xy-ml',label:'↔ X (Left)', prop:'margin-left'},
+    {id:'xy-mb',label:'↓ Bottom',   prop:'margin-bottom'},
+    {id:'xy-mr',label:'→ Right',    prop:'margin-right'},
+  ].forEach(f=>{
+    const cur=parseFloat(getOvr(sel.sel,f.prop))||0;
+    const c=document.createElement('div'); c.className='xy-cell';
+    c.innerHTML=`<div class="xy-lbl">${f.label}</div><input class="xy-inp" id="${f.id}" type="number" value="${cur}" step="1">`;
+    c.querySelector('input').addEventListener('input',e=>{
+      setOvr(sel.sel,f.prop,e.target.value+'px'); applyAll(); drawRing(); updateCSSPane();
     });
+    g.appendChild(c);
+  });
+  p.appendChild(g);
+
+  // Step selector
+  p.appendChild(mkSec('Nudge'));
+  const sr=document.createElement('div'); sr.className='step-row';
+  sr.innerHTML='<span>Step:</span>';
+  [1,2,5,10].forEach(s=>{
+    const b=document.createElement('button');
+    b.className='sopt'+(s===step?' on':''); b.textContent=s+'px';
+    b.addEventListener('click',()=>{ step=s; buildPosPane(); });
+    sr.appendChild(b);
+  });
+  p.appendChild(sr);
+
+  // D-pad
+  const dp=document.createElement('div'); dp.className='dpad';
+  const map=[null,{d:'up',i:'▲'},null,{d:'left',i:'◀'},{center:true},{d:'right',i:'▶'},null,{d:'down',i:'▼'},null];
+  map.forEach(m=>{
+    const b=document.createElement('button');
+    if(!m){b.style.visibility='hidden';b.className='dp';}
+    else if(m.center){b.className='dp dp-center';b.textContent=step+'px';b.disabled=true;}
+    else{b.className='dp';b.textContent=m.i;b.addEventListener('click',()=>nudge(m.d));}
+    dp.appendChild(b);
+  });
+  p.appendChild(dp);
+
+  // pos props from registry
+  if(sel.pos.length){
+    p.appendChild(mkSec('Spacing overrides'));
+    sel.pos.forEach(prop=>p.appendChild(mkRange(prop)));
+  }
+
+  p.appendChild(mkReset());
+}
+
+function nudge(dir) {
+  if(!sel) return;
+  const map={up:['margin-top',-step],down:['margin-top',+step],left:['margin-left',-step],right:['margin-left',+step]};
+  const [prop,delta]=map[dir];
+  const cur=parseFloat(getOvr(sel.sel,prop))||0;
+  setOvr(sel.sel,prop,(cur+delta)+'px');
+  applyAll(); drawRing(); updateCSSPane(); syncPosInputs();
+}
+
+function syncPosInputs() {
+  if(!sel) return;
+  const mt=document.getElementById('xy-mt'); if(mt) mt.value=parseFloat(getOvr(sel.sel,'margin-top'))||0;
+  const ml=document.getElementById('xy-ml'); if(ml) ml.value=parseFloat(getOvr(sel.sel,'margin-left'))||0;
+}
+
+/* ─── SIZE PANE ─── */
+function buildSizePane() {
+  const p=document.getElementById('p-size'); p.innerHTML='';
+  if(!sel) return;
+
+  p.appendChild(mkSec('Width & Height'));
+  const g=document.createElement('div'); g.className='xy-grid';
+  ['width','height'].forEach(prop=>{
+    const cur=parseFloat(getOvr(sel.sel,prop))||'';
+    const c=document.createElement('div'); c.className='xy-cell';
+    c.innerHTML=`<div class="xy-lbl">${prop}</div><input class="xy-inp" type="number" placeholder="auto" value="${cur}" step="1">`;
+    c.querySelector('input').addEventListener('input',e=>{
+      const v=e.target.value;
+      if(v) setOvr(sel.sel,prop,v+'px');
+      else { if(ovr[sel.sel]) delete ovr[sel.sel][prop]; }
+      applyAll(); drawRing(); updateCSSPane();
+    });
+    g.appendChild(c);
+  });
+  p.appendChild(g);
+
+  if(sel.size.length){
+    p.appendChild(mkSec('Size & spacing'));
+    sel.size.forEach(prop=>p.appendChild(mkRange(prop)));
+  }
+  p.appendChild(mkReset());
+}
+
+/* ─── STYLE PANE ─── */
+function buildStylePane() {
+  const p=document.getElementById('p-style'); p.innerHTML='';
+  if(!sel||!sel.style.length){
+    p.innerHTML='<p style="color:var(--muted);font-size:0.78rem;margin-top:8px">No style props for this element.</p>';
+    return;
+  }
+  p.appendChild(mkSec('Colours & typography'));
+  sel.style.forEach(prop=>{
+    if(prop.type==='color'){
+      const cur=getOvr(sel.sel,prop.k)||prop.def;
+      const hex=toHex(cur)||'#ffffff';
+      const row=document.createElement('div'); row.className='crow';
+      row.innerHTML=`<span class="clbl">${prop.label}</span>
+        <input class="csw" type="color" value="${hex}">
+        <input class="cinp" type="text" value="${cur}">`;
+      const ci=row.querySelector('[type=color]'), ti=row.querySelector('.cinp');
+      ci.addEventListener('input',()=>{ ti.value=ci.value; applyStyle(prop,ci.value); });
+      ti.addEventListener('change',()=>{ applyStyle(prop,ti.value); const h=toHex(ti.value); if(h) ci.value=h; });
+      p.appendChild(row);
+    } else {
+      p.appendChild(mkRange(prop));
+    }
+  });
+  p.appendChild(mkReset());
+}
+
+function applyStyle(prop,val) {
+  setOvr(sel.sel,prop.k,val);
+  if(prop.cv){ tokOvr[prop.cv]=val; refreshTokInputs(); }
+  applyAll(); updateCSSPane();
+}
+
+/* ─── LIST PANE ─── */
+function buildListPane() {
+  const p=document.getElementById('p-list');
+  p.innerHTML='<p style="font-size:0.72rem;color:var(--muted);margin-bottom:10px">Or tap directly in the preview.</p>';
+  ELS.forEach(el=>{
+    const r=document.createElement('div'); r.className='eli'; r.dataset.id=el.id;
+    r.innerHTML=`<div class="eli-n">${el.label}</div><div class="eli-d">${el.desc}</div>`;
+    r.addEventListener('click',()=>{ selectEl(el); switchStab('pos'); });
+    p.appendChild(r);
+  });
+}
+
+/* ─── TOKEN PANE ─── */
+function buildTokenPane() {
+  const p=document.getElementById('p-tok');
+  p.innerHTML='<p style="font-size:0.72rem;color:var(--muted);margin-bottom:12px">Global tokens — cascade everywhere.</p>';
+  TOKENS.forEach(tok=>{
+    const cur=tokOvr[tok.v]||tok.def;
+    const hex=toHex(cur)||cur;
+    const r=document.createElement('div'); r.className='trow';
+    r.innerHTML=`<input class="tsw" type="color" value="${hex}" data-tv="${tok.v}">
+      <div class="tinfo"><div class="tname">${tok.label}</div><div class="thint">${tok.hint}</div></div>
+      <input class="tval" type="text" value="${cur}" data-tt="${tok.v}">`;
+    const ci=r.querySelector('[type=color]'), ti=r.querySelector('.tval');
+    ci.addEventListener('input',()=>{ ti.value=ci.value; setTok(tok.v,ci.value); });
+    ti.addEventListener('change',()=>{ setTok(tok.v,ti.value); const h=toHex(ti.value); if(h) ci.value=h; });
+    p.appendChild(r);
+  });
+  const rb=document.createElement('button'); rb.className='rbtn'; rb.textContent='↺ Reset all colours';
+  rb.addEventListener('click',()=>{ tokOvr={}; buildTokenPane(); applyAll(); updateCSSPane(); toast('Colours reset'); });
+  p.appendChild(rb);
+}
+
+function setTok(v,val) { tokOvr[v]=val; applyAll(); updateCSSPane(); }
+function refreshTokInputs() {
+  document.querySelectorAll('[data-tv]').forEach(el=>{ const v=tokOvr[el.dataset.tv]; if(v){el.value=toHex(v)||v;} });
+  document.querySelectorAll('[data-tt]').forEach(el=>{ const v=tokOvr[el.dataset.tt]; if(v) el.value=v; });
+}
+
+/* ─── OVERRIDES ─── */
+function getOvr(s,p) { return ovr[s]?.[p]; }
+function setOvr(s,p,v) { if(!ovr[s]) ovr[s]={}; ovr[s][p]=v; }
+
+/* ─── APPLY ─── */
+function applyAll() {
+  try {
+    const doc=frame.contentWindow.document;
+    doc.getElementById('make-ed')?.remove();
+    const rules=[];
+    const tr=Object.entries(tokOvr).map(([k,v])=>`  ${k}: ${v};`).join('\n');
+    if(tr) rules.push(`:root {\n${tr}\n}`);
+    Object.entries(ovr).forEach(([s,props])=>{
+      const d=Object.entries(props).map(([k,v])=>`  ${k}: ${v} !important;`).join('\n');
+      if(d) rules.push(`${s} {\n${d}\n}`);
+    });
+    if(!rules.length) return;
+    const st=doc.createElement('style'); st.id='make-ed'; st.textContent=rules.join('\n\n');
+    doc.head.appendChild(st);
+    drawRing();
   } catch(e) {}
 }
 
-/* ─── TABS ─── */
-document.getElementById('panel-tabs').addEventListener('click', e => {
-  const tab = e.target.closest('.tab');
-  if (!tab) return;
-  activeTab = tab.dataset.tab;
-  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === activeTab));
-  ['elements','props','colours','css'].forEach(id => {
-    document.getElementById('pane-'+id).style.display = id === activeTab ? '' : 'none';
-  });
-  if (activeTab === 'css') updateCSSPane();
-});
-
-/* ─── ELEMENT LIST ─── */
-function buildElementList() {
-  const pane = document.getElementById('pane-elements');
-  pane.innerHTML = '<p style="font-size:0.72rem;color:var(--muted);margin-bottom:10px;line-height:1.6">Click an element below — or click directly in the preview to select it.</p>';
-  ELEMENTS.forEach(el => {
-    const row = document.createElement('div');
-    row.className = 'el-row';
-    row.dataset.id = el.id;
-    row.innerHTML = `<div class="el-row-name">${el.label}</div><div class="el-row-desc">${el.desc}</div>`;
-    row.addEventListener('click', () => selectElement(el));
-    pane.appendChild(row);
-  });
-}
-
-function selectElement(el) {
-  selectedEl = el;
-  // Highlight in list
-  document.querySelectorAll('.el-row').forEach(r =>
-    r.classList.toggle('sel', r.dataset.id === el.id)
-  );
-  // Switch to props tab
-  activeTab = 'props';
-  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === 'props'));
-  ['elements','props','colours','css'].forEach(id => {
-    document.getElementById('pane-'+id).style.display = id === 'props' ? '' : 'none';
-  });
-  buildPropsPanel(el);
-  drawHighlights();
-  setStatus(`Editing: ${el.label} — selector: ${el.sel}`);
-}
-
-/* ─── PROPERTIES PANEL ─── */
-function buildPropsPanel(el) {
-  const pane = document.getElementById('pane-props');
-  pane.innerHTML = `<div class="pg-title">Editing: ${el.label}</div>`;
-
-  el.props.forEach(prop => {
-    const cur = getOverride(el.sel, prop.key);
-    const val = cur !== undefined ? cur : prop.default;
-
-    if (prop.type === 'color') {
-      // Colour picker + text input
-      const row = document.createElement('div');
-      row.className = 'pr';
-      // Convert rgba to approximation for color input
-      const hexVal = rgbaToHex(val) || (typeof val==='string' && val.startsWith('#') ? val : '#ffffff');
-      row.innerHTML = `
-        <span class="pl">${prop.label}</span>
-        <input class="pi pi-color" type="color" value="${hexVal}" data-prop="${prop.key}" data-sel="${el.sel}" data-default="${prop.default}">
-        <input class="pi" type="text" value="${val}" style="flex:1;font-size:0.72rem" data-prop="${prop.key}" data-sel="${el.sel}" data-text="1">
-      `;
-      const colorIn = row.querySelector('[type=color]');
-      const textIn  = row.querySelector('[data-text]');
-      colorIn.addEventListener('input', () => {
-        textIn.value = colorIn.value;
-        setProp(el.sel, prop.key, colorIn.value, prop.cssVar);
-      });
-      textIn.addEventListener('change', () => {
-        setProp(el.sel, prop.key, textIn.value, prop.cssVar);
-        const hex = rgbaToHex(textIn.value);
-        if (hex) colorIn.value = hex;
-      });
-      pane.appendChild(row);
-
-    } else if (prop.type === 'select') {
-      const row = document.createElement('div');
-      row.className = 'pr';
-      const opts = prop.options.map(o => `<option value="${o}" ${String(val)===o?'selected':''}>${o}</option>`).join('');
-      row.innerHTML = `<span class="pl">${prop.label}</span><select class="pi" data-prop="${prop.key}" data-sel="${el.sel}">${opts}</select>`;
-      row.querySelector('select').addEventListener('change', e => {
-        const cssVal = prop.cssTemplate ? prop.cssTemplate.replace('VAL', e.target.value) : e.target.value;
-        setProp(el.sel, prop.cssProp || prop.key, cssVal);
-      });
-      pane.appendChild(row);
-
-    } else {
-      // Numeric range + text
-      const numVal = parseFloat(val) || 0;
-      const unit   = prop.type === 'em' ? 'em' : 'px';
-      const step   = prop.step || 1;
-      const wrap   = document.createElement('div');
-      wrap.innerHTML = `
-        <div class="pl" style="margin-bottom:2px;font-size:0.7rem;color:var(--muted)">${prop.label}</div>
-        <div class="pi-range-row">
-          <input class="pi-range" type="range" min="${prop.min||0}" max="${prop.max||100}" step="${step}" value="${numVal}" style="flex:1" data-prop="${prop.key}" data-sel="${el.sel}" data-unit="${unit}">
-          <span class="pi-range-val">${numVal}${unit}</span>
-        </div>
-      `;
-      const range  = wrap.querySelector('input');
-      const valLbl = wrap.querySelector('.pi-range-val');
-      range.addEventListener('input', () => {
-        const v = parseFloat(range.value);
-        valLbl.textContent = v + unit;
-        setProp(el.sel, prop.key, v + unit);
-      });
-      pane.appendChild(wrap);
-    }
-  });
-
-  // Nudge controls for elements with x/y-able padding
-  const hasPositional = el.props.some(p => p.key === 'padding' || p.key === 'margin-top');
-  if (hasPositional) {
-    const nudgeSec = document.createElement('div');
-    nudgeSec.innerHTML = `<div class="pg-title">Quick nudge</div>`;
-    const nudgeRow = document.createElement('div');
-    nudgeRow.className = 'nudge-row';
-    [['↑','-1px','margin-top'],['↓','+1px','margin-top'],['−','−1px','padding'],['＋','+1px','padding']].forEach(([lbl, delta, p]) => {
-      const b = document.createElement('button');
-      b.className = 'nudge-btn'; b.textContent = lbl;
-      b.addEventListener('click', () => nudge(el, p, delta));
-      nudgeRow.appendChild(b);
-    });
-    nudgeSec.appendChild(nudgeRow);
-    pane.appendChild(nudgeSec);
-  }
-
-  // Reset button
-  const resetBtn = document.createElement('button');
-  resetBtn.className = 'reset-btn';
-  resetBtn.textContent = '↺ Reset this element to defaults';
-  resetBtn.addEventListener('click', () => {
-    if (overrides[el.sel]) { delete overrides[el.sel]; }
-    buildPropsPanel(el);
-    applyAllToFrame();
-    updateCSSPane();
-    toast(`Reset ${el.label}`);
-  });
-  pane.appendChild(resetBtn);
-}
-
-function nudge(el, prop, delta) {
-  const cur = getOverride(el.sel, prop);
-  const num = parseFloat(cur || '0');
-  const inc = delta.startsWith('-') ? -1 : 1;
-  const unit = delta.includes('px') ? 'px' : 'em';
-  setProp(el.sel, prop, (num + inc) + unit);
-  buildPropsPanel(el); // refresh sliders
-}
-
-/* ─── GLOBAL COLOUR PANEL ─── */
-function buildColourPanel() {
-  const pane = document.getElementById('pane-colours');
-  pane.innerHTML = `<p style="font-size:0.72rem;color:var(--muted);margin-bottom:12px;line-height:1.5">
-    Edit global CSS colour tokens. Changes cascade everywhere they're used.</p>`;
-
-  COLOR_TOKENS.forEach(token => {
-    const cur = tokenOverrides[token.varName] || token.default;
-    const hex = rgbaToHex(cur) || cur;
-    const wrap = document.createElement('div');
-    wrap.style.marginBottom = '10px';
-    wrap.innerHTML = `
-      <div style="font-size:0.72rem;font-weight:600;margin-bottom:3px">${token.label}</div>
-      <div style="font-size:0.65rem;color:var(--muted);margin-bottom:4px">${token.hint}</div>
-      <div class="pr" style="margin-bottom:0">
-        <input class="pi pi-color" type="color" value="${hex}" data-token="${token.varName}">
-        <input class="pi" type="text" value="${cur}" style="font-size:0.72rem" data-token-text="${token.varName}">
-      </div>
-    `;
-    const ci = wrap.querySelector('[type=color]');
-    const ti = wrap.querySelector('[data-token-text]');
-    ci.addEventListener('input', () => {
-      ti.value = ci.value;
-      setToken(token.varName, ci.value);
-    });
-    ti.addEventListener('change', () => {
-      setToken(token.varName, ti.value);
-      const h = rgbaToHex(ti.value);
-      if (h) ci.value = h;
-    });
-    pane.appendChild(wrap);
-  });
-
-  const resetBtn = document.createElement('button');
-  resetBtn.className = 'reset-btn';
-  resetBtn.textContent = '↺ Reset all colours to defaults';
-  resetBtn.addEventListener('click', () => {
-    tokenOverrides = {};
-    buildColourPanel();
-    applyAllToFrame();
-    updateCSSPane();
-    toast('Colours reset');
-  });
-  pane.appendChild(resetBtn);
-}
-
-function setToken(varName, value) {
-  tokenOverrides[varName] = value;
-  applyAllToFrame();
-  updateCSSPane();
-}
-
-/* ─── OVERRIDE STORE ─── */
-function getOverride(sel, prop) {
-  return overrides[sel]?.[prop];
-}
-
-function setProp(sel, prop, value, cssVar) {
-  if (!overrides[sel]) overrides[sel] = {};
-  overrides[sel][prop] = value;
-  // If this prop maps to a CSS var, also update the token
-  if (cssVar) {
-    tokenOverrides[cssVar] = value;
-    // refresh colour panel to stay in sync
-    rebuildColourPanelValues();
-  }
-  applyAllToFrame();
-  updateCSSPane();
-}
-
-function rebuildColourPanelValues() {
-  document.querySelectorAll('[data-token]').forEach(el => {
-    const t = tokenOverrides[el.dataset.token];
-    if (t) { el.value = rgbaToHex(t) || t; }
-  });
-  document.querySelectorAll('[data-token-text]').forEach(el => {
-    const t = tokenOverrides[el.dataset.tokenText];
-    if (t) el.value = t;
-  });
-}
-
-/* ─── APPLY TO FRAME ─── */
-function applyAllToFrame() {
-  try {
-    const fw = frame.contentWindow;
-    const doc = fw.document;
-
-    // Remove old editor style
-    doc.getElementById('make-editor-overrides')?.remove();
-
-    const rules = [];
-
-    // Token overrides (CSS vars on :root)
-    const tokenRules = Object.entries(tokenOverrides)
-      .map(([k,v]) => `  ${k}: ${v};`).join('\n');
-    if (tokenRules) rules.push(`:root {\n${tokenRules}\n}`);
-
-    // Selector overrides
-    Object.entries(overrides).forEach(([sel, props]) => {
-      const decls = Object.entries(props).map(([k,v]) => `  ${k}: ${v} !important;`).join('\n');
-      if (decls) rules.push(`${sel} {\n${decls}\n}`);
-    });
-
-    if (!rules.length) return;
-
-    const style = doc.createElement('style');
-    style.id = 'make-editor-overrides';
-    style.textContent = rules.join('\n\n');
-    doc.head.appendChild(style);
-
-    drawHighlights();
-  } catch(e) {
-    setStatus('⚠ Could not apply styles — try reloading the preview');
-  }
-}
-
-/* ─── CSS DIFF PANE ─── */
+/* ─── CSS PANE ─── */
 function updateCSSPane() {
-  const out = document.getElementById('css-out');
-  const lines = [];
-
-  if (Object.keys(tokenOverrides).length) {
-    lines.push('/* ── TOKEN OVERRIDES ── */');
+  const lines=[];
+  if(Object.keys(tokOvr).length){
     lines.push(':root {');
-    Object.entries(tokenOverrides).forEach(([k,v]) => lines.push(`  ${k}: ${v};`));
-    lines.push('}');
-    lines.push('');
+    Object.entries(tokOvr).forEach(([k,v])=>lines.push(`  ${k}: ${v};`));
+    lines.push('}','');
   }
-
-  Object.entries(overrides).forEach(([sel, props]) => {
-    if (!Object.keys(props).length) return;
-    lines.push(`/* ── ${sel} ── */`);
-    lines.push(`${sel} {`);
-    Object.entries(props).forEach(([k,v]) => lines.push(`  ${k}: ${v};`));
-    lines.push('}');
-    lines.push('');
+  Object.entries(ovr).forEach(([s,props])=>{
+    if(!Object.keys(props).length) return;
+    lines.push(`${s} {`);
+    Object.entries(props).forEach(([k,v])=>lines.push(`  ${k}: ${v};`));
+    lines.push('}','');
   });
-
-  out.textContent = lines.length ? lines.join('\n') : 'No changes yet.';
+  document.getElementById('css-out').textContent=lines.length?lines.join('\n'):'No changes yet.';
 }
 
-/* ─── COPY / DOWNLOAD ─── */
-document.getElementById('btn-copy').addEventListener('click', () => {
-  const css = buildMergedCSS();
-  if (navigator.clipboard) {
-    navigator.clipboard.writeText(css).then(() => toast('Copied — paste into styles.css in your editor'));
-  } else {
-    const ta = document.createElement('textarea');
-    ta.value = css; document.body.appendChild(ta); ta.select();
-    document.execCommand('copy'); document.body.removeChild(ta);
-    toast('Copied!');
-  }
-});
-
-document.getElementById('btn-dl').addEventListener('click', () => {
-  const css = buildMergedCSS();
-  const b = new Blob([css], { type:'text/css' });
-  const u = URL.createObjectURL(b);
-  const a = document.createElement('a');
-  a.href = u; a.download = 'styles.css'; a.click();
-  URL.revokeObjectURL(u);
-  toast('Downloaded styles.css — replace the file in your repo');
-});
-
-document.getElementById('btn-apply').addEventListener('click', () => {
-  applyAllToFrame();
-  toast('Applied to preview');
-});
-
-document.getElementById('btn-reset').addEventListener('click', () => {
-  if (!confirm('Reset ALL changes back to defaults?')) return;
-  overrides = {}; tokenOverrides = {};
-  buildColourPanel();
-  applyAllToFrame();
-  updateCSSPane();
-  if (selectedEl) buildPropsPanel(selectedEl);
-  toast('All changes reset');
-});
-
-/* ─── MERGE CSS ─── */
-function buildMergedCSS() {
-  if (!origCSS) {
-    // No original — just output the overrides
-    const lines = ['/* Maké — editor overrides (paste into styles.css) */\n'];
-    if (Object.keys(tokenOverrides).length) {
-      lines.push(':root {');
-      Object.entries(tokenOverrides).forEach(([k,v]) => lines.push(`  ${k}: ${v};`));
-      lines.push('}');
-    }
-    Object.entries(overrides).forEach(([sel, props]) => {
-      lines.push(`\n${sel} {`);
-      Object.entries(props).forEach(([k,v]) => lines.push(`  ${k}: ${v};`));
-      lines.push('}');
-    });
-    return lines.join('\n');
-  }
-
-  let css = origCSS;
-
-  // 1. Patch :root token values in-place
-  Object.entries(tokenOverrides).forEach(([varName, value]) => {
-    // Match "  --varName: anything;"
-    const re = new RegExp(`(\\s${escapeRegex(varName)}:\\s*)([^;]+)(;)`, 'g');
-    if (re.test(css)) {
-      css = css.replace(new RegExp(`(\\s${escapeRegex(varName)}:\\s*)([^;]+)(;)`, 'g'), `$1${value}$3`);
-    }
-  });
-
-  // 2. Patch selector blocks in-place
-  Object.entries(overrides).forEach(([sel, props]) => {
-    Object.entries(props).forEach(([prop, value]) => {
-      // Try to find existing "sel { ... prop: old; ... }" and replace the value
-      // We look for the selector block and patch each property
-      const selRe = new RegExp(
-        `(${escapeRegex(sel)}\\s*\\{[^}]*?${escapeRegex(prop)}:\\s*)([^;!}]+)(\\s*!important)?`,
-        'gs'
-      );
-      if (selRe.test(css)) {
-        css = css.replace(
-          new RegExp(`(${escapeRegex(sel)}\\s*\\{[^}]*?${escapeRegex(prop)}:\\s*)([^;!}]+)(\\s*!important)?`, 'gs'),
-          `$1${value}`
-        );
-      }
-      // If property not found in the block, append it
-      // This is complex — for safety, append an override block at the end
-    });
-  });
-
-  // 3. Append any overrides that couldn't be patched in-place
-  const extraLines = ['\n\n/* ── Maké Editor overrides ── */'];
-  let hasExtra = false;
-  Object.entries(overrides).forEach(([sel, props]) => {
-    const decls = Object.entries(props).map(([k,v]) => `  ${k}: ${v};`).join('\n');
-    if (decls) { extraLines.push(`${sel} {\n${decls}\n}`); hasExtra = true; }
-  });
-  if (hasExtra) css += extraLines.join('\n');
-
-  return css;
+function copyCSS() {
+  const css=buildFinalCSS();
+  if(navigator.clipboard) navigator.clipboard.writeText(css).then(()=>toast('Copied — paste into styles.css'));
+  else { const t=document.createElement('textarea');t.value=css;document.body.appendChild(t);t.select();document.execCommand('copy');t.remove();toast('Copied!'); }
+}
+function dlCSS() {
+  const b=new Blob([buildFinalCSS()],{type:'text/css'});
+  const u=URL.createObjectURL(b); const a=document.createElement('a');
+  a.href=u; a.download='styles.css'; a.click(); URL.revokeObjectURL(u);
+  toast('Downloaded — replace styles.css in your repo');
+}
+function buildFinalCSS() {
+  const hdr='/* Maké Editor overrides — append to bottom of styles.css */\n\n';
+  const lines=[hdr];
+  if(Object.keys(tokOvr).length){ lines.push(':root {'); Object.entries(tokOvr).forEach(([k,v])=>lines.push(`  ${k}: ${v};`)); lines.push('}',''); }
+  Object.entries(ovr).forEach(([s,props])=>{ if(!Object.keys(props).length)return; lines.push(`${s} {`); Object.entries(props).forEach(([k,v])=>lines.push(`  ${k}: ${v};`)); lines.push('}',''); });
+  return origCSS ? origCSS+'\n\n'+lines.join('\n') : lines.join('\n');
 }
 
-/* ─── HELPERS ─── */
-function rgbaToHex(val) {
-  if (!val || typeof val !== 'string') return null;
-  if (val.startsWith('#')) return val.length === 7 ? val : null;
-  const m = val.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
-  if (!m) return null;
-  return '#' + [m[1],m[2],m[3]].map(n => parseInt(n).toString(16).padStart(2,'0')).join('');
+function resetAll() {
+  if(!confirm('Reset ALL changes?')) return;
+  ovr={}; tokOvr={};
+  buildTokenPane();
+  try { frame.contentWindow.document.getElementById('make-ed')?.remove(); } catch {}
+  updateCSSPane(); drawRing();
+  if(sel){ buildPosPane(); buildSizePane(); buildStylePane(); }
+  toast('All reset');
 }
 
-function escapeRegex(s) {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+/* ─── DOM HELPERS ─── */
+function mkSec(t) { const d=document.createElement('div'); d.className='sec'; d.textContent=t; return d; }
+
+function mkRange(prop) {
+  const cur=parseFloat(getOvr(sel?.sel,prop.k))||parseFloat(prop.def)||0;
+  const unit=prop.type==='em'?'em':'px';
+  const w=document.createElement('div');
+  w.innerHTML=`<div class="rrow"><span class="rlbl">${prop.label}</span>
+    <input class="rng" type="range" min="${prop.min??0}" max="${prop.max??100}" step="${prop.step??1}" value="${cur}">
+    <span class="rval">${cur}${unit}</span></div>`;
+  const r=w.querySelector('.rng'), v=w.querySelector('.rval');
+  r.addEventListener('input',()=>{
+    const val=parseFloat(r.value);
+    v.textContent=val+unit;
+    setOvr(sel.sel,prop.k,val+unit);
+    if(prop.cv){ tokOvr[prop.cv]=val+unit; refreshTokInputs(); }
+    applyAll(); drawRing(); updateCSSPane();
+  });
+  return w;
 }
 
-function setStatus(m) { document.getElementById('statusbar').textContent = m; }
+function mkReset() {
+  const b=document.createElement('button'); b.className='rbtn';
+  b.textContent='↺ Reset '+(sel?.label||'element')+' to defaults';
+  b.addEventListener('click',()=>{
+    if(sel&&ovr[sel.sel]) delete ovr[sel.sel];
+    buildPosPane(); buildSizePane(); buildStylePane();
+    applyAll(); updateCSSPane(); toast('Reset');
+  });
+  return b;
+}
 
-function toast(m) {
-  const el = document.getElementById('toast');
-  el.textContent = m; el.classList.add('up');
-  clearTimeout(tt);
-  tt = setTimeout(() => el.classList.remove('up'), 2600);
+/* ─── UI HELPERS ─── */
+function showPill(msg) { pill.textContent=msg; pill.classList.add('vis'); clearTimeout(pt); pt=setTimeout(()=>pill.classList.remove('vis'),2600); }
+function showCoord(msg) { coordEl.textContent=msg; coordEl.classList.add('vis'); }
+function hideCoord() { setTimeout(()=>coordEl.classList.remove('vis'),1200); }
+function toHex(v) {
+  if(!v||typeof v!=='string') return null;
+  if(v.startsWith('#')&&v.length===7) return v;
+  const m=v.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+  if(!m) return null;
+  return '#'+[m[1],m[2],m[3]].map(n=>(+n).toString(16).padStart(2,'0')).join('');
+}
+function toast(msg) {
+  const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('up');
+  clearTimeout(tt); tt=setTimeout(()=>el.classList.remove('up'),2600);
 }
 </script>
 </body>
