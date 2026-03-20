@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>Maké — Layout Editor</title>
+  <style>
+    :root {
+      --rose:     #b68d93;
+      --rose-d:   #9e7279;
+      --sage:     #9ba59a;
+      --sage-d:   #6b7c7a;
+      --dark:     #2a2a2a;
+      --panel:    #1a1f1e;
+      --surface:  #242a29;
+      --surface2: #2e3634;
+      --border:   rgba(255,255,255,0.10);
+      --text:     #e8eeec;
+      --muted:    #8aada8;
+      --gold:     #e8b89f;
+    }
+    *,*::before,*::after { margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent; }
+    html,body { height:100%;overflow:hidden;font-family:'Inter',-apple-system,sans-serif;background:var(--panel);color:var(--text);user-select:none; }
+    body { display:flex;flex-direction:column; }
+
+    /* ── TOP BAR ── */
+    #topbar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 8px 12px;
+      display: flex; align-items: center; gap: 8px;
+      flex-shrink: 0; flex-wrap: wrap; z-index: 100;
+    }
+    #topbar h1 { font-size:0.9rem;color:var(--gold);font-weight:700;white-space:nowrap;flex-shrink:0; }
+    #topbar .sep { width:1px;height:20px;background:var(--border);flex-shrink:0; }
+    .btn {
+      padding:6px 12px;border-radius:8px;border:none;
+      font-size:0.78rem;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;
+      transition:opacity 0.15s,transform 0.1s;
+    }
+    .btn:active { transform:scale(0.95); }
+    .btn-rose   { background:var(--rose);color:white; }
+    .btn-sage   { background:var(--sage-d);color:white; }
+    .btn-ghost  { background:rgba(255,255,255,0.08);color:var(--text);border:1px solid var(--border); }
+    .btn-gold   { background:var(--gold);color:#2a1a10; }
+    #hint { font-size:0.72rem;color:var(--muted);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+
+    /* ── MAIN LAYOUT ── */
+    #main { display:flex;flex:1;overflow:hidden;min-height:0; }
+
+    /* ── PREVIEW IFRAME ── */
+    #preview-wrap {
+      flex:1;position:relative;overflow:hidden;background:#000;
+      touch-action:none;
+    }
+    #preview-frame {
+      border:none;width:390px;height:100%;max-height:100%;
+      display:block;
+      box-shadow:4px 0 32px rgba(0,0,0,0.5);
+    }
+    #preview-overlay {
+      position:absolute;top:0;left:0;width:390px;height:100%;
+      pointer-events:none;z-index:10;
+    }
+    /* highlight boxes drawn by JS over the iframe */
+    .hl-box {
+      position:absolute;pointer-events:none;
+      border:2px dashed var(--gold);
+      border-radius:4px;
+      background:rgba(232,184,159,0.08);
+      transition:all 0.15s;
+    }
+    .hl-box.selected {
+      border-color:var(--rose);border-style:solid;
+      background:rgba(182,141,147,0.14);
+    }
+    .hl-label {
+      position:absolute;top:-18px;left:0;
+      background:var(--gold);color:#2a1a10;
+      font-size:9px;font-weight:700;padding:1px 5px;
+      border-radius:3px;white-space:nowrap;pointer-events:none;
+    }
+
+    /* ── SIDE PANEL ── */
+    #panel {
+      width:260px;flex-shrink:0;
+      background:var(--surface);
+      border-left:1px solid var(--border);
+      display:flex;flex-direction:column;overflow:hidden;
+    }
+    #panel-tabs {
+      display:flex;border-bottom:1px solid var(--border);flex-shrink:0;
+    }
+    .tab {
+      flex:1;padding:9px 2px;text-align:center;
+      font-size:0.62rem;font-weight:700;cursor:pointer;
+      color:var(--muted);border-bottom:2px solid transparent;
+      text-transform:uppercase;letter-spacing:0.05em;transition:color 0.15s;
+    }
+    .tab.active { color:var(--gold);border-bottom-color:var(--gold); }
+    #panel-body { flex:1;overflow-y:auto;padding:10px; }
+    #panel-body::-webkit-scrollbar { width:3px; }
+    #panel-body::-webkit-scrollbar-thumb { background:var(--border);border-radius:4px; }
+
+    /* ── ELEMENT LIST ── */
+    .el-row {
+      background:var(--panel);border:1.5px solid var(--border);
+      border-radius:8px;padding:8px 10px;margin-bottom:5px;cursor:pointer;
+      transition:border-color 0.15s,background 0.15s;
+    }
+    .el-row:hover { border-color:rgba(232,184,159,0.4);background:rgba(232,184,159,0.04); }
+    .el-row.sel { border-color:var(--rose);background:rgba(182,141,147,0.08); }
+    .el-row-name { font-size:0.82rem;font-weight:600; }
+    .el-row-desc { font-size:0.68rem;color:var(--muted);margin-top:2px; }
+
+    /* ── PROPERTY CONTROLS ── */
+    .pg-title {
+      font-size:0.62rem;text-transform:uppercase;letter-spacing:0.08em;
+      color:var(--muted);margin:12px 0 6px;padding-bottom:3px;
+      border-bottom:1px solid var(--border);
+    }
+    .pg-title:first-child { margin-top:0; }
+    .pr { display:flex;align-items:center;gap:8px;margin-bottom:7px; }
+    .pl { font-size:0.7rem;color:var(--muted);width:72px;flex-shrink:0; }
+    .pi {
+      flex:1;background:var(--panel);border:1px solid var(--border);
+      border-radius:6px;color:var(--text);padding:5px 8px;
+      font-size:0.82rem;font-family:monospace;outline:none;
+      transition:border-color 0.15s;
+    }
+    .pi:focus { border-color:var(--rose); }
+    .pi-color { width:36px;height:30px;padding:2px 3px;cursor:pointer;border-radius:6px; }
+    .pi-range { -webkit-appearance:none;height:4px;border-radius:4px;background:var(--border);cursor:pointer; }
+    .pi-range::-webkit-slider-thumb { -webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--rose);cursor:pointer; }
+    .pi-range-row { display:flex;align-items:center;gap:8px;margin-bottom:7px; }
+    .pi-range-val { font-size:0.75rem;color:var(--gold);font-family:monospace;width:40px;text-align:right;flex-shrink:0; }
+    .nudge-row { display:flex;gap:4px;margin-bottom:7px; }
+    .nudge-btn { flex:1;padding:7px 2px;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:0.9rem;cursor:pointer;text-align:center;transition:background 0.1s; }
+    .nudge-btn:active { background:rgba(182,141,147,0.3); }
+    .reset-btn { width:100%;padding:8px;margin-top:4px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:7px;color:var(--muted);font-size:0.78rem;cursor:pointer;transition:background 0.15s; }
+    .reset-btn:hover { background:rgba(255,255,255,0.08); }
+
+    /* ── DIFF / CSS PANE ── */
+    #css-out {
+      background:var(--panel);border:1px solid var(--border);
+      border-radius:6px;padding:10px;font-size:0.67rem;
+      font-family:monospace;color:#86efac;white-space:pre-wrap;
+      overflow:auto;line-height:1.6;max-height:100%;
+      word-break:break-all;
+    }
+    .css-added   { color:#86efac; }
+    .css-section { color:#7dd3fc;font-weight:bold; }
+
+    /* ── STATUS BAR ── */
+    #statusbar {
+      background:var(--surface);border-top:1px solid var(--border);
+      padding:4px 12px;font-size:0.7rem;color:var(--muted);
+      flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    }
+
+    /* ── TOAST ── */
+    #toast {
+      position:fixed;bottom:28px;left:50%;
+      transform:translateX(-50%) translateY(60px);
+      background:var(--rose);color:white;
+      padding:7px 18px;border-radius:20px;
+      font-size:0.82rem;font-weight:600;
+      transition:transform 0.22s var(--ease);z-index:9999;pointer-events:none;
+      --ease: cubic-bezier(0.22,0.25,0,1);
+    }
+    #toast.up { transform:translateX(-50%) translateY(0); }
+
+    /* ── MOBILE ── */
+    @media(max-width:680px){
+      #main { flex-direction:column-reverse; }
+      #panel { width:100%;height:50%;border-left:none;border-top:1px solid var(--border); }
+      #preview-frame { width:100%;height:100%; }
+      #preview-overlay { width:100%; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="topbar">
+  <h1>✦ Maké Editor</h1>
+  <div class="sep"></div>
+  <button class="btn btn-rose"  id="btn-apply">▶ Apply</button>
+  <button class="btn btn-gold"  id="btn-copy">📋 Copy CSS</button>
+  <button class="btn btn-sage"  id="btn-dl">⬇ Download styles.css</button>
+  <button class="btn btn-ghost" id="btn-reset">↺ Reset all</button>
+  <div id="hint">Select an element to edit its layout and colours</div>
+</div>
+
+<div id="main">
+  <div id="preview-wrap">
+    <iframe id="preview-frame" src="index.html" sandbox="allow-scripts allow-same-origin"></iframe>
+    <div id="preview-overlay"></div>
+  </div>
+
+  <div id="panel">
+    <div id="panel-tabs">
+      <div class="tab active" data-tab="elements">Elements</div>
+      <div class="tab"        data-tab="props">Properties</div>
+      <div class="tab"        data-tab="colours">Colours</div>
+      <div class="tab"        data-tab="css">CSS Diff</div>
+    </div>
+    <div id="panel-body">
+      <div id="pane-elements"></div>
+      <div id="pane-props"   style="display:none"><p style="color:var(--muted);font-size:0.8rem;margin-top:8px">Select an element first.</p></div>
+      <div id="pane-colours" style="display:none"></div>
+      <div id="pane-css"     style="display:none"><pre id="css-out">No changes yet.</pre></div>
+    </div>
+  </div>
+</div>
+
+<div id="statusbar">Ready — select an element from the list or click directly in the preview</div>
+<div id="toast">Done!</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════
+   MAKÉ LAYOUT EDITOR
+   
+   How it works:
+   1. Loads index.html in an iframe
+   2. Waits for the iframe to load, then injects a picker
+      script into it so clicks in the preview highlight elements
+   3. The ELEMENTS list shows every editable CSS component
+   4. Selecting one shows property controls (spacing, size,
+      border-radius, font-size, colours)
+   5. All changes are stored as a delta map over the original CSS vars
+   6. Apply: injects <style> overrides into the iframe live
+   7. Copy / Download: outputs the full modified styles.css
+      with all overrides merged in
+   ═══════════════════════════════════════════════════════ */
+
+/* ─── EDITABLE ELEMENT REGISTRY ─── */
+/* Each entry maps to a real CSS selector in styles.css.
+   "props" lists what controls to show. */
+const ELEMENTS = [
+  {
+    id:    'app-bg',
+    label: 'App background',
+    desc:  'Main sage green background colour',
+    sel:   'body, #app',
+    props: [
+      { key:'background', label:'Background',  type:'color', cssVar:'--sage', default:'#9ba59a' },
+    ]
+  },
+  {
+    id:    'header',
+    label: 'Header area',
+    desc:  'Top section padding & spacing',
+    sel:   '.app-header',
+    props: [
+      { key:'padding-top',    label:'Top pad',    type:'px', default:14, min:0, max:40 },
+      { key:'padding-bottom', label:'Bot pad',    type:'px', default:4,  min:0, max:40 },
+    ]
+  },
+  {
+    id:    'app-title',
+    label: 'Title — Maké',
+    desc:  'The big italic serif heading',
+    sel:   '.app-title',
+    props: [
+      { key:'font-size',    label:'Font size',    type:'px',    default:52, min:24, max:80 },
+      { key:'color',        label:'Colour',       type:'color', default:'#ffffff' },
+      { key:'letter-spacing',label:'Tracking',   type:'em',    default:-0.03, min:-0.1, max:0.1, step:0.005 },
+      { key:'margin-top',   label:'Top margin',  type:'px',    default:-4, min:-20, max:20 },
+    ]
+  },
+  {
+    id:    'app-subtitle',
+    label: 'Subtitle',
+    desc:  '"Your personal command center"',
+    sel:   '.app-subtitle',
+    props: [
+      { key:'font-size',   label:'Font size', type:'px',    default:16, min:10, max:28 },
+      { key:'color',       label:'Colour',    type:'color', default:'rgba(255,255,255,0.88)' },
+      { key:'margin-top',  label:'Top margin',type:'px',    default:3,  min:-10, max:20 },
+    ]
+  },
+  {
+    id:    'date-widget',
+    label: 'Date widget (pill)',
+    desc:  'Pink date pill top-right',
+    sel:   '.date-widget',
+    props: [
+      { key:'background',    label:'Background', type:'color', cssVar:'--rose',   default:'#b68d93' },
+      { key:'border-radius', label:'Radius',     type:'px',    default:16, min:0, max:40 },
+      { key:'padding-top',   label:'Pad top',    type:'px',    default:6,  min:0, max:20 },
+      { key:'padding-bottom',label:'Pad bottom', type:'px',    default:8,  min:0, max:20 },
+      { key:'padding-left',  label:'Pad left',   type:'px',    default:12, min:0, max:24 },
+      { key:'padding-right', label:'Pad right',  type:'px',    default:12, min:0, max:24 },
+    ]
+  },
+  {
+    id:    'date-day',
+    label: 'Date — day name',
+    desc:  'The italic "Friday" text',
+    sel:   '.date-widget-day',
+    props: [
+      { key:'font-size',   label:'Font size', type:'px', default:15, min:8, max:32 },
+      { key:'color',       label:'Colour',    type:'color', default:'#ffffff' },
+    ]
+  },
+  {
+    id:    'date-date',
+    label: 'Date — date string',
+    desc:  'The "20 March 2026" small text',
+    sel:   '.date-widget-date',
+    props: [
+      { key:'font-size', label:'Font size', type:'px', default:9, min:6, max:18 },
+      { key:'color',     label:'Colour',    type:'color', default:'rgba(255,255,255,0.75)' },
+    ]
+  },
+  {
+    id:    'burger-btn',
+    label: 'Burger button',
+    desc:  'Pink menu button top-left',
+    sel:   '.burger-btn',
+    props: [
+      { key:'background',    label:'Background', type:'color', cssVar:'--rose', default:'#b68d93' },
+      { key:'width',         label:'Width',      type:'px', default:44, min:28, max:64 },
+      { key:'height',        label:'Height',     type:'px', default:44, min:28, max:64 },
+      { key:'border-radius', label:'Radius',     type:'px', default:12, min:0, max:24 },
+    ]
+  },
+  {
+    id:    'cards',
+    label: 'Cards',
+    desc:  'Dark note/code/link cards in the grid',
+    sel:   '.card',
+    props: [
+      { key:'background',    label:'Background', type:'color', cssVar:'--dark-card', default:'#3e3e3e' },
+      { key:'border-radius', label:'Radius',     type:'px', default:16, min:0, max:28 },
+      { key:'padding',       label:'Padding',    type:'px', default:11, min:4, max:24 },
+      { key:'min-height',    label:'Min height', type:'px', default:170, min:80, max:320 },
+      { key:'gap',           label:'Gap',        type:'px', default:4, min:0, max:16 },
+    ]
+  },
+  {
+    id:    'card-grid',
+    label: 'Card grid',
+    desc:  'The 3-column grid layout',
+    sel:   '.grid',
+    props: [
+      { key:'gap', label:'Gap between cards', type:'px', default:10, min:2, max:24 },
+      { key:'--grid-cols', label:'Columns', type:'select', options:['1','2','3','4'], default:'3',
+        cssProp:'grid-template-columns', cssTemplate:'repeat(VAL,1fr)' }
+    ]
+  },
+  {
+    id:    'card-label',
+    label: 'Card — type label',
+    desc:  '"Note: build plan" header text',
+    sel:   '.card-type-label',
+    props: [
+      { key:'font-size', label:'Font size', type:'px', default:10.5, min:8, max:16 },
+      { key:'color',     label:'Colour',    type:'color', default:'rgba(255,255,255,0.90)' },
+    ]
+  },
+  {
+    id:    'card-content',
+    label: 'Card — content text',
+    desc:  'Monospace preview text inside cards',
+    sel:   '.card-content',
+    props: [
+      { key:'font-size', label:'Font size', type:'px', default:10, min:7, max:14 },
+      { key:'color',     label:'Colour',    type:'color', default:'rgba(255,255,255,0.56)' },
+    ]
+  },
+  {
+    id:    'bottom-nav',
+    label: 'Bottom nav bar',
+    desc:  'Navigation bar at the bottom',
+    sel:   '.bottom-nav',
+    props: [
+      { key:'background',    label:'Background', type:'color', cssVar:'--sage-deeper', default:'#6b7c7a' },
+      { key:'padding-top',   label:'Pad top',    type:'px', default:8,  min:0, max:24 },
+      { key:'padding-bottom',label:'Pad bottom', type:'px', default:22, min:0, max:40 },
+    ]
+  },
+  {
+    id:    'fab',
+    label: 'FAB (+ button)',
+    desc:  'Centre rose add button in nav',
+    sel:   '.nav-btn-fab',
+    props: [
+      { key:'background',    label:'Background', type:'color', cssVar:'--rose', default:'#b68d93' },
+      { key:'width',         label:'Width',      type:'px', default:52, min:36, max:72 },
+      { key:'height',        label:'Height',     type:'px', default:52, min:36, max:72 },
+      { key:'border-radius', label:'Radius',     type:'px', default:20, min:0, max:36 },
+      { key:'margin-top',    label:'Lift (neg)', type:'px', default:-10, min:-24, max:0 },
+    ]
+  },
+  {
+    id:    'nav-icons',
+    label: 'Nav icons',
+    desc:  'Inactive nav icon colour',
+    sel:   '.nav-btn',
+    props: [
+      { key:'color', label:'Icon colour', type:'color', default:'rgba(255,255,255,0.52)' },
+    ]
+  },
+  {
+    id:    'sticky-note',
+    label: 'Sticky notes',
+    desc:  'Floating draggable sticky notes',
+    sel:   '.sticky-note',
+    props: [
+      { key:'border-radius', label:'Radius',    type:'px', default:12, min:0, max:24 },
+      { key:'padding',       label:'Padding',   type:'px', default:9,  min:4, max:20 },
+    ]
+  },
+];
+
+/* ─── GLOBAL COLOUR TOKENS ─── */
+const COLOR_TOKENS = [
+  { varName:'--rose',       label:'Rose (accent)',    default:'#b68d93', hint:'Burger btn, FAB, tags, dividers' },
+  { varName:'--rose-dark',  label:'Rose dark',        default:'#9e7279', hint:'Active/pressed states' },
+  { varName:'--rose-light', label:'Rose light',       default:'#cdb0b5', hint:'Toggle knob' },
+  { varName:'--tan',        label:'Tan',              default:'#b6a486', hint:'Available for accents' },
+  { varName:'--sage',       label:'Sage (background)',default:'#9ba59a', hint:'Main app background' },
+  { varName:'--sage-dark',  label:'Sage dark',        default:'#7d8e8c', hint:'Secondary surfaces' },
+  { varName:'--sage-deeper',label:'Sage deeper',      default:'#6b7c7a', hint:'Nav bar background' },
+  { varName:'--dark',       label:'Dark',             default:'#444444', hint:'Base dark value' },
+  { varName:'--dark-card',  label:'Card background',  default:'#3e3e3e', hint:'All card backgrounds' },
+  { varName:'--dark-modal', label:'Modal background', default:'#3a3a3a', hint:'Modals, add menu' },
+  { varName:'--dark-drawer',label:'Drawer background',default:'#363636', hint:'Side drawer' },
+];
+
+/* ─── STATE ─── */
+let activeTab    = 'elements';
+let selectedEl   = null;      // element registry entry
+let overrides    = {};         // { '.selector': { 'property': 'value' } }
+let tokenOverrides = {};       // { '--varName': '#hex' }
+let origCSS      = null;       // raw text of styles.css fetched on load
+let tt;
+
+const frame    = document.getElementById('preview-frame');
+const overlay  = document.getElementById('preview-overlay');
+
+/* ─── BOOT ─── */
+window.addEventListener('load', async () => {
+  buildElementList();
+  buildColourPanel();
+  await fetchOrigCSS();
+  frame.addEventListener('load', onFrameLoad);
+  setStatus('Preview loaded — select an element to edit');
+});
+
+async function fetchOrigCSS() {
+  try {
+    const r = await fetch('./styles.css?_=' + Date.now());
+    origCSS  = await r.text();
+  } catch(e) {
+    origCSS = '/* Could not fetch styles.css */';
+    setStatus('⚠ Could not read styles.css — copy/download will use overrides only');
+  }
+}
+
+function onFrameLoad() {
+  injectPickerIntoFrame();
+  applyAllToFrame();
+}
+
+/* ─── INJECT CLICK-PICKER INTO IFRAME ─── */
+function injectPickerIntoFrame() {
+  try {
+    const fw = frame.contentWindow;
+    if (!fw) return;
+    // Listen for element clicks from iframe
+    fw.addEventListener('click', (e) => {
+      // Walk up to find a matching registry element
+      let node = e.target;
+      while (node && node !== fw.document.body) {
+        const match = findElementByNode(node, fw.document);
+        if (match) { selectElement(match); return; }
+        node = node.parentElement;
+      }
+    }, true);
+  } catch(e) { /* cross-origin guard */ }
+}
+
+function findElementByNode(node, doc) {
+  for (const el of ELEMENTS) {
+    try {
+      const matches = doc.querySelectorAll(el.sel);
+      for (const m of matches) {
+        if (m === node || m.contains(node)) return el;
+      }
+    } catch {}
+  }
+  return null;
+}
+
+/* ─── HIGHLIGHT OVERLAYS ─── */
+function drawHighlights() {
+  overlay.innerHTML = '';
+  if (!selectedEl) return;
+
+  try {
+    const fw    = frame.contentWindow;
+    const frect = frame.getBoundingClientRect();
+    const fdoc  = fw.document;
+
+    fdoc.querySelectorAll(selectedEl.sel).forEach(node => {
+      const r = node.getBoundingClientRect();
+      // getBoundingClientRect is relative to iframe's viewport
+      const box = document.createElement('div');
+      box.className = 'hl-box selected';
+      box.style.cssText = `left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;`;
+      const lbl = document.createElement('div');
+      lbl.className = 'hl-label';
+      lbl.textContent = selectedEl.label;
+      box.appendChild(lbl);
+      overlay.appendChild(box);
+    });
+  } catch(e) {}
+}
+
+/* ─── TABS ─── */
+document.getElementById('panel-tabs').addEventListener('click', e => {
+  const tab = e.target.closest('.tab');
+  if (!tab) return;
+  activeTab = tab.dataset.tab;
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === activeTab));
+  ['elements','props','colours','css'].forEach(id => {
+    document.getElementById('pane-'+id).style.display = id === activeTab ? '' : 'none';
+  });
+  if (activeTab === 'css') updateCSSPane();
+});
+
+/* ─── ELEMENT LIST ─── */
+function buildElementList() {
+  const pane = document.getElementById('pane-elements');
+  pane.innerHTML = '<p style="font-size:0.72rem;color:var(--muted);margin-bottom:10px;line-height:1.6">Click an element below — or click directly in the preview to select it.</p>';
+  ELEMENTS.forEach(el => {
+    const row = document.createElement('div');
+    row.className = 'el-row';
+    row.dataset.id = el.id;
+    row.innerHTML = `<div class="el-row-name">${el.label}</div><div class="el-row-desc">${el.desc}</div>`;
+    row.addEventListener('click', () => selectElement(el));
+    pane.appendChild(row);
+  });
+}
+
+function selectElement(el) {
+  selectedEl = el;
+  // Highlight in list
+  document.querySelectorAll('.el-row').forEach(r =>
+    r.classList.toggle('sel', r.dataset.id === el.id)
+  );
+  // Switch to props tab
+  activeTab = 'props';
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === 'props'));
+  ['elements','props','colours','css'].forEach(id => {
+    document.getElementById('pane-'+id).style.display = id === 'props' ? '' : 'none';
+  });
+  buildPropsPanel(el);
+  drawHighlights();
+  setStatus(`Editing: ${el.label} — selector: ${el.sel}`);
+}
+
+/* ─── PROPERTIES PANEL ─── */
+function buildPropsPanel(el) {
+  const pane = document.getElementById('pane-props');
+  pane.innerHTML = `<div class="pg-title">Editing: ${el.label}</div>`;
+
+  el.props.forEach(prop => {
+    const cur = getOverride(el.sel, prop.key);
+    const val = cur !== undefined ? cur : prop.default;
+
+    if (prop.type === 'color') {
+      // Colour picker + text input
+      const row = document.createElement('div');
+      row.className = 'pr';
+      // Convert rgba to approximation for color input
+      const hexVal = rgbaToHex(val) || (typeof val==='string' && val.startsWith('#') ? val : '#ffffff');
+      row.innerHTML = `
+        <span class="pl">${prop.label}</span>
+        <input class="pi pi-color" type="color" value="${hexVal}" data-prop="${prop.key}" data-sel="${el.sel}" data-default="${prop.default}">
+        <input class="pi" type="text" value="${val}" style="flex:1;font-size:0.72rem" data-prop="${prop.key}" data-sel="${el.sel}" data-text="1">
+      `;
+      const colorIn = row.querySelector('[type=color]');
+      const textIn  = row.querySelector('[data-text]');
+      colorIn.addEventListener('input', () => {
+        textIn.value = colorIn.value;
+        setProp(el.sel, prop.key, colorIn.value, prop.cssVar);
+      });
+      textIn.addEventListener('change', () => {
+        setProp(el.sel, prop.key, textIn.value, prop.cssVar);
+        const hex = rgbaToHex(textIn.value);
+        if (hex) colorIn.value = hex;
+      });
+      pane.appendChild(row);
+
+    } else if (prop.type === 'select') {
+      const row = document.createElement('div');
+      row.className = 'pr';
+      const opts = prop.options.map(o => `<option value="${o}" ${String(val)===o?'selected':''}>${o}</option>`).join('');
+      row.innerHTML = `<span class="pl">${prop.label}</span><select class="pi" data-prop="${prop.key}" data-sel="${el.sel}">${opts}</select>`;
+      row.querySelector('select').addEventListener('change', e => {
+        const cssVal = prop.cssTemplate ? prop.cssTemplate.replace('VAL', e.target.value) : e.target.value;
+        setProp(el.sel, prop.cssProp || prop.key, cssVal);
+      });
+      pane.appendChild(row);
+
+    } else {
+      // Numeric range + text
+      const numVal = parseFloat(val) || 0;
+      const unit   = prop.type === 'em' ? 'em' : 'px';
+      const step   = prop.step || 1;
+      const wrap   = document.createElement('div');
+      wrap.innerHTML = `
+        <div class="pl" style="margin-bottom:2px;font-size:0.7rem;color:var(--muted)">${prop.label}</div>
+        <div class="pi-range-row">
+          <input class="pi-range" type="range" min="${prop.min||0}" max="${prop.max||100}" step="${step}" value="${numVal}" style="flex:1" data-prop="${prop.key}" data-sel="${el.sel}" data-unit="${unit}">
+          <span class="pi-range-val">${numVal}${unit}</span>
+        </div>
+      `;
+      const range  = wrap.querySelector('input');
+      const valLbl = wrap.querySelector('.pi-range-val');
+      range.addEventListener('input', () => {
+        const v = parseFloat(range.value);
+        valLbl.textContent = v + unit;
+        setProp(el.sel, prop.key, v + unit);
+      });
+      pane.appendChild(wrap);
+    }
+  });
+
+  // Nudge controls for elements with x/y-able padding
+  const hasPositional = el.props.some(p => p.key === 'padding' || p.key === 'margin-top');
+  if (hasPositional) {
+    const nudgeSec = document.createElement('div');
+    nudgeSec.innerHTML = `<div class="pg-title">Quick nudge</div>`;
+    const nudgeRow = document.createElement('div');
+    nudgeRow.className = 'nudge-row';
+    [['↑','-1px','margin-top'],['↓','+1px','margin-top'],['−','−1px','padding'],['＋','+1px','padding']].forEach(([lbl, delta, p]) => {
+      const b = document.createElement('button');
+      b.className = 'nudge-btn'; b.textContent = lbl;
+      b.addEventListener('click', () => nudge(el, p, delta));
+      nudgeRow.appendChild(b);
+    });
+    nudgeSec.appendChild(nudgeRow);
+    pane.appendChild(nudgeSec);
+  }
+
+  // Reset button
+  const resetBtn = document.createElement('button');
+  resetBtn.className = 'reset-btn';
+  resetBtn.textContent = '↺ Reset this element to defaults';
+  resetBtn.addEventListener('click', () => {
+    if (overrides[el.sel]) { delete overrides[el.sel]; }
+    buildPropsPanel(el);
+    applyAllToFrame();
+    updateCSSPane();
+    toast(`Reset ${el.label}`);
+  });
+  pane.appendChild(resetBtn);
+}
+
+function nudge(el, prop, delta) {
+  const cur = getOverride(el.sel, prop);
+  const num = parseFloat(cur || '0');
+  const inc = delta.startsWith('-') ? -1 : 1;
+  const unit = delta.includes('px') ? 'px' : 'em';
+  setProp(el.sel, prop, (num + inc) + unit);
+  buildPropsPanel(el); // refresh sliders
+}
+
+/* ─── GLOBAL COLOUR PANEL ─── */
+function buildColourPanel() {
+  const pane = document.getElementById('pane-colours');
+  pane.innerHTML = `<p style="font-size:0.72rem;color:var(--muted);margin-bottom:12px;line-height:1.5">
+    Edit global CSS colour tokens. Changes cascade everywhere they're used.</p>`;
+
+  COLOR_TOKENS.forEach(token => {
+    const cur = tokenOverrides[token.varName] || token.default;
+    const hex = rgbaToHex(cur) || cur;
+    const wrap = document.createElement('div');
+    wrap.style.marginBottom = '10px';
+    wrap.innerHTML = `
+      <div style="font-size:0.72rem;font-weight:600;margin-bottom:3px">${token.label}</div>
+      <div style="font-size:0.65rem;color:var(--muted);margin-bottom:4px">${token.hint}</div>
+      <div class="pr" style="margin-bottom:0">
+        <input class="pi pi-color" type="color" value="${hex}" data-token="${token.varName}">
+        <input class="pi" type="text" value="${cur}" style="font-size:0.72rem" data-token-text="${token.varName}">
+      </div>
+    `;
+    const ci = wrap.querySelector('[type=color]');
+    const ti = wrap.querySelector('[data-token-text]');
+    ci.addEventListener('input', () => {
+      ti.value = ci.value;
+      setToken(token.varName, ci.value);
+    });
+    ti.addEventListener('change', () => {
+      setToken(token.varName, ti.value);
+      const h = rgbaToHex(ti.value);
+      if (h) ci.value = h;
+    });
+    pane.appendChild(wrap);
+  });
+
+  const resetBtn = document.createElement('button');
+  resetBtn.className = 'reset-btn';
+  resetBtn.textContent = '↺ Reset all colours to defaults';
+  resetBtn.addEventListener('click', () => {
+    tokenOverrides = {};
+    buildColourPanel();
+    applyAllToFrame();
+    updateCSSPane();
+    toast('Colours reset');
+  });
+  pane.appendChild(resetBtn);
+}
+
+function setToken(varName, value) {
+  tokenOverrides[varName] = value;
+  applyAllToFrame();
+  updateCSSPane();
+}
+
+/* ─── OVERRIDE STORE ─── */
+function getOverride(sel, prop) {
+  return overrides[sel]?.[prop];
+}
+
+function setProp(sel, prop, value, cssVar) {
+  if (!overrides[sel]) overrides[sel] = {};
+  overrides[sel][prop] = value;
+  // If this prop maps to a CSS var, also update the token
+  if (cssVar) {
+    tokenOverrides[cssVar] = value;
+    // refresh colour panel to stay in sync
+    rebuildColourPanelValues();
+  }
+  applyAllToFrame();
+  updateCSSPane();
+}
+
+function rebuildColourPanelValues() {
+  document.querySelectorAll('[data-token]').forEach(el => {
+    const t = tokenOverrides[el.dataset.token];
+    if (t) { el.value = rgbaToHex(t) || t; }
+  });
+  document.querySelectorAll('[data-token-text]').forEach(el => {
+    const t = tokenOverrides[el.dataset.tokenText];
+    if (t) el.value = t;
+  });
+}
+
+/* ─── APPLY TO FRAME ─── */
+function applyAllToFrame() {
+  try {
+    const fw = frame.contentWindow;
+    const doc = fw.document;
+
+    // Remove old editor style
+    doc.getElementById('make-editor-overrides')?.remove();
+
+    const rules = [];
+
+    // Token overrides (CSS vars on :root)
+    const tokenRules = Object.entries(tokenOverrides)
+      .map(([k,v]) => `  ${k}: ${v};`).join('\n');
+    if (tokenRules) rules.push(`:root {\n${tokenRules}\n}`);
+
+    // Selector overrides
+    Object.entries(overrides).forEach(([sel, props]) => {
+      const decls = Object.entries(props).map(([k,v]) => `  ${k}: ${v} !important;`).join('\n');
+      if (decls) rules.push(`${sel} {\n${decls}\n}`);
+    });
+
+    if (!rules.length) return;
+
+    const style = doc.createElement('style');
+    style.id = 'make-editor-overrides';
+    style.textContent = rules.join('\n\n');
+    doc.head.appendChild(style);
+
+    drawHighlights();
+  } catch(e) {
+    setStatus('⚠ Could not apply styles — try reloading the preview');
+  }
+}
+
+/* ─── CSS DIFF PANE ─── */
+function updateCSSPane() {
+  const out = document.getElementById('css-out');
+  const lines = [];
+
+  if (Object.keys(tokenOverrides).length) {
+    lines.push('/* ── TOKEN OVERRIDES ── */');
+    lines.push(':root {');
+    Object.entries(tokenOverrides).forEach(([k,v]) => lines.push(`  ${k}: ${v};`));
+    lines.push('}');
+    lines.push('');
+  }
+
+  Object.entries(overrides).forEach(([sel, props]) => {
+    if (!Object.keys(props).length) return;
+    lines.push(`/* ── ${sel} ── */`);
+    lines.push(`${sel} {`);
+    Object.entries(props).forEach(([k,v]) => lines.push(`  ${k}: ${v};`));
+    lines.push('}');
+    lines.push('');
+  });
+
+  out.textContent = lines.length ? lines.join('\n') : 'No changes yet.';
+}
+
+/* ─── COPY / DOWNLOAD ─── */
+document.getElementById('btn-copy').addEventListener('click', () => {
+  const css = buildMergedCSS();
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(css).then(() => toast('Copied — paste into styles.css in your editor'));
+  } else {
+    const ta = document.createElement('textarea');
+    ta.value = css; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+    toast('Copied!');
+  }
+});
+
+document.getElementById('btn-dl').addEventListener('click', () => {
+  const css = buildMergedCSS();
+  const b = new Blob([css], { type:'text/css' });
+  const u = URL.createObjectURL(b);
+  const a = document.createElement('a');
+  a.href = u; a.download = 'styles.css'; a.click();
+  URL.revokeObjectURL(u);
+  toast('Downloaded styles.css — replace the file in your repo');
+});
+
+document.getElementById('btn-apply').addEventListener('click', () => {
+  applyAllToFrame();
+  toast('Applied to preview');
+});
+
+document.getElementById('btn-reset').addEventListener('click', () => {
+  if (!confirm('Reset ALL changes back to defaults?')) return;
+  overrides = {}; tokenOverrides = {};
+  buildColourPanel();
+  applyAllToFrame();
+  updateCSSPane();
+  if (selectedEl) buildPropsPanel(selectedEl);
+  toast('All changes reset');
+});
+
+/* ─── MERGE CSS ─── */
+function buildMergedCSS() {
+  if (!origCSS) {
+    // No original — just output the overrides
+    const lines = ['/* Maké — editor overrides (paste into styles.css) */\n'];
+    if (Object.keys(tokenOverrides).length) {
+      lines.push(':root {');
+      Object.entries(tokenOverrides).forEach(([k,v]) => lines.push(`  ${k}: ${v};`));
+      lines.push('}');
+    }
+    Object.entries(overrides).forEach(([sel, props]) => {
+      lines.push(`\n${sel} {`);
+      Object.entries(props).forEach(([k,v]) => lines.push(`  ${k}: ${v};`));
+      lines.push('}');
+    });
+    return lines.join('\n');
+  }
+
+  let css = origCSS;
+
+  // 1. Patch :root token values in-place
+  Object.entries(tokenOverrides).forEach(([varName, value]) => {
+    // Match "  --varName: anything;"
+    const re = new RegExp(`(\\s${escapeRegex(varName)}:\\s*)([^;]+)(;)`, 'g');
+    if (re.test(css)) {
+      css = css.replace(new RegExp(`(\\s${escapeRegex(varName)}:\\s*)([^;]+)(;)`, 'g'), `$1${value}$3`);
+    }
+  });
+
+  // 2. Patch selector blocks in-place
+  Object.entries(overrides).forEach(([sel, props]) => {
+    Object.entries(props).forEach(([prop, value]) => {
+      // Try to find existing "sel { ... prop: old; ... }" and replace the value
+      // We look for the selector block and patch each property
+      const selRe = new RegExp(
+        `(${escapeRegex(sel)}\\s*\\{[^}]*?${escapeRegex(prop)}:\\s*)([^;!}]+)(\\s*!important)?`,
+        'gs'
+      );
+      if (selRe.test(css)) {
+        css = css.replace(
+          new RegExp(`(${escapeRegex(sel)}\\s*\\{[^}]*?${escapeRegex(prop)}:\\s*)([^;!}]+)(\\s*!important)?`, 'gs'),
+          `$1${value}`
+        );
+      }
+      // If property not found in the block, append it
+      // This is complex — for safety, append an override block at the end
+    });
+  });
+
+  // 3. Append any overrides that couldn't be patched in-place
+  const extraLines = ['\n\n/* ── Maké Editor overrides ── */'];
+  let hasExtra = false;
+  Object.entries(overrides).forEach(([sel, props]) => {
+    const decls = Object.entries(props).map(([k,v]) => `  ${k}: ${v};`).join('\n');
+    if (decls) { extraLines.push(`${sel} {\n${decls}\n}`); hasExtra = true; }
+  });
+  if (hasExtra) css += extraLines.join('\n');
+
+  return css;
+}
+
+/* ─── HELPERS ─── */
+function rgbaToHex(val) {
+  if (!val || typeof val !== 'string') return null;
+  if (val.startsWith('#')) return val.length === 7 ? val : null;
+  const m = val.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+  if (!m) return null;
+  return '#' + [m[1],m[2],m[3]].map(n => parseInt(n).toString(16).padStart(2,'0')).join('');
+}
+
+function escapeRegex(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function setStatus(m) { document.getElementById('statusbar').textContent = m; }
+
+function toast(m) {
+  const el = document.getElementById('toast');
+  el.textContent = m; el.classList.add('up');
+  clearTimeout(tt);
+  tt = setTimeout(() => el.classList.remove('up'), 2600);
+}
+</script>
+</body>
+</html>
