@@ -566,109 +566,278 @@ body{background:var(--sage);color:#fff;font-family:var(--font-body);font-size:14
 .save-as-cancel:active { background: rgba(255,255,255,0.10); color: white; }
 
 /* ================================================================
-   SETTINGS MODAL — V13 redesign
+   SETTINGS PAGE — V14
+   Full-page slide-up panel (same pattern as note/code editors).
+   Never clips, always scrollable, consistent with the rest of the app.
    ================================================================ */
 
-.settings-section-label {
-  font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.32);
-  text-transform: uppercase; letter-spacing: 1px;
-  margin-bottom: 8px; padding: 0 2px;
+/* ── Page shell ── */
+.settings-page {
+  position:       fixed;
+  inset:          0;
+  z-index:        800;
+  display:        flex;
+  flex-direction: column;
+  background:     var(--dark-modal);
+  transform:      translateY(100%);
+  transition:     transform var(--dur-slow) var(--ease-spring);
+  overflow:       hidden;
+}
+.settings-page.open { transform: translateY(0); }
+
+/* ── Top bar ── */
+.settings-topbar {
+  display:       flex;
+  align-items:   center;
+  gap:           12px;
+  padding:       14px 18px 12px;
+  flex-shrink:   0;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  background:    rgba(0,0,0,0.18);
+}
+.settings-back-btn {
+  width:           38px;
+  height:          38px;
+  background:      rgba(255,255,255,0.07);
+  border:          1px solid rgba(255,255,255,0.10);
+  border-radius:   var(--r-md);
+  color:           rgba(255,255,255,0.80);
+  cursor:          pointer;
+  display:         flex;
+  align-items:     center;
+  justify-content: center;
+  flex-shrink:     0;
+  transition:      background var(--dur-fast);
+}
+.settings-back-btn:active { background: rgba(255,255,255,0.14); }
+.settings-back-btn svg {
+  width: 18px; height: 18px;
+  stroke: currentColor; fill: none;
+  stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round;
+}
+.settings-topbar-title {
+  flex:       1;
+  font-size:  17px;
+  font-weight: 700;
+  color:      white;
 }
 
-/* Explainer card — "How saving works" */
-.settings-explainer-card {
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.09);
-  border-radius: 14px;
-  overflow: hidden;
+/* ── Scrollable body ── */
+.settings-body {
+  flex:       1;
+  overflow-y: auto;
+  padding:    20px 18px 48px;
+  -webkit-overflow-scrolling: touch;
 }
-.settings-explainer-row {
-  display: flex; align-items: flex-start; gap: 13px;
-  padding: 14px 16px;
-}
-.settings-explainer-icon {
-  font-size: 22px; flex-shrink: 0; margin-top: 1px; line-height: 1;
-}
-.settings-explainer-title {
-  font-size: 13px; font-weight: 700; color: white; margin-bottom: 5px;
-}
-.settings-explainer-body {
-  font-size: 12px; color: rgba(255,255,255,0.45); line-height: 1.6;
-}
-.settings-explainer-divider {
-  height: 1px; background: rgba(255,255,255,0.07); margin: 0 16px;
+.settings-body::-webkit-scrollbar { width: 3px; }
+.settings-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.14); border-radius: 2px; }
+
+/* ── Section groups ── */
+.settings-group { margin-bottom: 28px; }
+.settings-group-label {
+  font-size:      10px;
+  font-weight:    700;
+  color:          rgba(255,255,255,0.30);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom:  10px;
+  padding:        0 2px;
 }
 
-/* Protection badge */
-.settings-badge {
-  display: inline-flex; align-items: center; gap: 7px;
-  padding: 7px 14px; border-radius: 10px;
-  font-size: 13px; font-weight: 600;
-  margin-bottom: 8px; width: 100;
+/* ── Toggle rows (theme, ambient, view) ── */
+.settings-toggle-row {
+  display:         flex;
+  align-items:     center;
+  justify-content: space-between;
+  padding:         14px 16px;
+  background:      rgba(255,255,255,0.05);
+  border:          1px solid rgba(255,255,255,0.08);
+  border-radius:   14px;
+  margin-bottom:   8px;
 }
-.settings-badge--green {
-  background: rgba(61,153,112,0.14);
-  border: 1px solid rgba(61,153,112,0.28);
-  color: #6dd4a4;
+.settings-toggle-left { display: flex; align-items: center; gap: 12px; }
+.settings-toggle-icon { font-size: 20px; line-height: 1; }
+.settings-toggle-label {
+  font-size:   14px;
+  font-weight: 600;
+  color:       white;
 }
-.settings-badge--amber {
-  background: rgba(230,126,34,0.12);
-  border: 1px solid rgba(230,126,34,0.28);
-  color: #e8a86a;
-}
-.settings-badge--grey {
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.10);
-  color: rgba(255,255,255,0.45);
+.settings-toggle-desc {
+  font-size:   12px;
+  color:       rgba(255,255,255,0.38);
+  margin-top:  2px;
 }
 
-/* Usage bar */
+/* Mini toggle — reuses existing .mini-toggle / .mini-toggle-knob */
+
+/* ── Segmented control (view mode: grid / list) ── */
+.settings-segmented {
+  display:    flex;
+  background: rgba(0,0,0,0.22);
+  border:     1px solid rgba(255,255,255,0.09);
+  border-radius: 12px;
+  overflow:   hidden;
+  flex-shrink: 0;
+}
+.settings-seg-btn {
+  flex:            1;
+  padding:         7px 14px;
+  background:      transparent;
+  border:          none;
+  color:           rgba(255,255,255,0.45);
+  font-size:       12px;
+  font-weight:     600;
+  font-family:     var(--font-body);
+  cursor:          pointer;
+  display:         flex;
+  align-items:     center;
+  justify-content: center;
+  gap:             5px;
+  transition:      background var(--dur-fast), color var(--dur-fast);
+}
+.settings-seg-btn.active {
+  background: rgba(182,141,147,0.25);
+  color:      white;
+}
+.settings-seg-btn svg {
+  width: 13px; height: 13px;
+  stroke: currentColor; fill: none;
+  stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+}
+
+/* ── Storage status card ── */
+.settings-storage-card {
+  background:    rgba(255,255,255,0.04);
+  border:        1px solid rgba(255,255,255,0.08);
+  border-radius: 16px;
+  overflow:      hidden;
+  margin-bottom: 8px;
+}
+.settings-storage-status {
+  display:    flex;
+  align-items: center;
+  gap:        12px;
+  padding:    14px 16px;
+}
+.settings-storage-icon { font-size: 22px; flex-shrink: 0; }
+.settings-storage-text { flex: 1; }
+.settings-storage-title {
+  font-size:   13px;
+  font-weight: 700;
+  color:       white;
+  margin-bottom: 2px;
+}
+.settings-storage-detail { font-size: 12px; line-height: 1.5; }
+.settings-storage-detail.green  { color: #6dd4a4; }
+.settings-storage-detail.amber  { color: #e8a86a; }
+.settings-storage-detail.muted  { color: rgba(255,255,255,0.38); }
+.settings-storage-divider { height: 1px; background: rgba(255,255,255,0.07); }
+.settings-usage-wrap { padding: 12px 16px; }
 .settings-usage-row {
-  display: flex; align-items: center; gap: 10px; margin-bottom: 8px;
+  display:     flex;
+  align-items: center;
+  gap:         10px;
+  margin-bottom: 6px;
 }
-.settings-usage-bar-wrap {
-  flex: 1; height: 5px;
-  background: rgba(255,255,255,0.09); border-radius: 999px; overflow: hidden;
+.settings-usage-bar-bg {
+  flex:          1;
+  height:        5px;
+  background:    rgba(255,255,255,0.09);
+  border-radius: 999px;
+  overflow:      hidden;
 }
-.settings-usage-bar {
-  height: 100%; background: var(--rose);
-  border-radius: 999px; transition: width 500ms var(--ease-out);
+.settings-usage-bar-fill {
+  height:        100%;
+  background:    var(--rose);
+  border-radius: 999px;
+  transition:    width 500ms var(--ease-out);
 }
 .settings-usage-label {
-  font-family: var(--font-mono); font-size: 11px;
-  color: rgba(255,255,255,0.32); flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size:   11px;
+  color:       rgba(255,255,255,0.32);
+  flex-shrink: 0;
+}
+.settings-storage-note {
+  font-size:   11px;
+  color:       rgba(255,255,255,0.28);
+  line-height: 1.6;
 }
 
-/* Fine print */
-.settings-fine-print {
-  font-size: 11px; color: rgba(255,255,255,0.28);
-  line-height: 1.6; padding: 0 2px;
-}
-
-/* Action rows — export, import, onboarding */
-.settings-action-row {
-  display: flex; align-items: center; gap: 13px;
-  width: 100%; padding: 13px 14px;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 12px;
-  cursor: pointer;
-  transition: background var(--dur-fast), border-color var(--dur-fast);
+/* ── Explainer card ── */
+.settings-explainer {
+  background:    rgba(255,255,255,0.04);
+  border:        1px solid rgba(255,255,255,0.08);
+  border-radius: 16px;
+  overflow:      hidden;
   margin-bottom: 8px;
-  text-align: left;
 }
-.settings-action-row:active {
-  background: rgba(182,141,147,0.14);
+.settings-explainer-row {
+  display:     flex;
+  align-items: flex-start;
+  gap:         13px;
+  padding:     14px 16px;
+}
+.settings-explainer-icon { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
+.settings-explainer-text { flex: 1; }
+.settings-explainer-title {
+  font-size:   13px;
+  font-weight: 700;
+  color:       white;
+  margin-bottom: 4px;
+}
+.settings-explainer-body {
+  font-size:   12px;
+  color:       rgba(255,255,255,0.42);
+  line-height: 1.65;
+}
+.settings-explainer-divider {
+  height:     1px;
+  background: rgba(255,255,255,0.07);
+  margin:     0 16px;
+}
+
+/* ── Action rows (export, import, onboarding reset) ── */
+.settings-action {
+  display:         flex;
+  align-items:     center;
+  gap:             13px;
+  width:           100%;
+  padding:         14px 16px;
+  background:      rgba(255,255,255,0.05);
+  border:          1px solid rgba(255,255,255,0.08);
+  border-radius:   14px;
+  cursor:          pointer;
+  transition:      background var(--dur-fast), border-color var(--dur-fast), transform var(--dur-fast);
+  margin-bottom:   8px;
+  text-align:      left;
+}
+.settings-action:active {
+  background:   rgba(182,141,147,0.14);
   border-color: rgba(182,141,147,0.28);
+  transform:    scale(0.99);
 }
-.settings-action-icon { font-size: 20px; flex-shrink: 0; line-height: 1; }
-.settings-action-text { flex: 1; }
+.settings-action-icon  { font-size: 22px; flex-shrink: 0; line-height: 1; }
+.settings-action-text  { flex: 1; }
 .settings-action-title {
-  font-size: 14px; font-weight: 600; color: white; margin-bottom: 2px;
+  font-size:   14px;
+  font-weight: 600;
+  color:       white;
+  margin-bottom: 2px;
 }
-.settings-action-desc {
-  font-size: 12px; color: rgba(255,255,255,0.38);
+.settings-action-desc  { font-size: 12px; color: rgba(255,255,255,0.38); }
+.settings-action-chevron {
+  font-size:  20px;
+  color:      rgba(255,255,255,0.20);
+  flex-shrink: 0;
 }
-.settings-action-arrow {
-  font-size: 20px; color: rgba(255,255,255,0.22); flex-shrink: 0;
+.settings-action.danger .settings-action-title { color: var(--rose-light); }
+
+/* ── App version footer ── */
+.settings-version {
+  text-align:  center;
+  padding-top: 12px;
+  font-size:   11px;
+  color:       rgba(255,255,255,0.18);
+  font-family: var(--font-mono);
 }

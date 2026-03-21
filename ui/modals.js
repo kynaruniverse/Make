@@ -149,60 +149,130 @@ export function showStickyModal() {
   });
 }
 
-// ── Settings modal ────────────────────────────────────────────
+// ── Settings — full-page slide-up panel ───────────────────────
 //
-// V13 rewrite:
-//   – Clear explanation that notes auto-save internally (like Samsung Notes)
-//   – Backup file is explained as a "safety net", not the primary save
-//   – Storage status shows protected/not protected
-//   – "Show welcome screen again" button for easy onboarding reset
+// V14: replaces the old modal with a full-page experience identical
+// in structure to the note/code editors. Slides up from bottom,
+// always full-screen, always scrollable, never clips content.
+//
+// Sections: Appearance · Organisation · How saving works ·
+//           Storage status · Backup & restore · Help
 
 export async function showSettingsModal() {
+  if (document.getElementById('settings-page')) return;
+
   const { getPersistenceState, getStorageEstimate } = await import('../core/storage.js');
   const { exportData, importData } = _lazyDataModule();
 
   const persistState = getPersistenceState();
   const estimate     = await getStorageEstimate();
+  const isDark       = localStorage.getItem('make_theme') === 'dark';
+  const isGrid       = state.viewMode !== 'list';
+  const isAmbient    = state.ambientEnabled;
 
-  // Protection badge
-  const protectedBadge = persistState === 'granted'
-    ? `<div class="settings-badge settings-badge--green">🔒 Data protected</div>`
+  const storageIcon   = persistState === 'granted' ? '🔒' : persistState === 'denied' ? '⚠️' : 'ℹ️';
+  const storageTitle  = persistState === 'granted' ? 'Data protected'
+                      : persistState === 'denied'  ? 'Not fully protected'
+                      : 'Checking…';
+  const storageDetail = persistState === 'granted'
+    ? 'Safe from browser clear. Only uninstalling the app removes your data.'
     : persistState === 'denied'
-      ? `<div class="settings-badge settings-badge--amber">⚠️ Install as app for full protection</div>`
-      : `<div class="settings-badge settings-badge--grey">ℹ️ Checking storage status…</div>`;
+      ? 'Install as a home screen app for full protection against browser clears.'
+      : 'Checking storage persistence status…';
+  const detailClass = persistState === 'granted' ? 'green' : persistState === 'denied' ? 'amber' : 'muted';
 
-  // Usage bar
   const usageBar = estimate ? `
-    <div class="settings-usage-row">
-      <div class="settings-usage-bar-wrap">
-        <div class="settings-usage-bar" style="width:${Math.min(estimate.percent, 100)}%"></div>
+    <div class="settings-storage-divider"></div>
+    <div class="settings-usage-wrap">
+      <div class="settings-usage-row">
+        <div class="settings-usage-bar-bg">
+          <div class="settings-usage-bar-fill" style="width:${Math.min(estimate.percent,100)}%"></div>
+        </div>
+        <span class="settings-usage-label">${estimate.usageStr} / ${estimate.quotaStr}</span>
       </div>
-      <span class="settings-usage-label">${estimate.usageStr} of ${estimate.quotaStr} used</span>
+      <div class="settings-storage-note">
+        Your data lives only on this device and is never sent anywhere.
+        Nobody else can access it — not us, not anyone.
+      </div>
     </div>` : '';
 
-  openModal({
-    title: 'Settings',
-    fields: [],
-    actions: [{ id: 's-close', label: 'Done', primary: true }],
-    onReady: (overlay, close) => {
+  const page = document.createElement('div');
+  page.id        = 'settings-page';
+  page.className = 'settings-page';
 
-      // Build rich content inside the modal
-      const content = overlay.querySelector('.modal-content');
-      content.innerHTML = `
+  page.innerHTML = `
+    <div class="settings-topbar">
+      <button class="settings-back-btn" id="settings-back" aria-label="Close settings">
+        <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+      <span class="settings-topbar-title">Settings</span>
+    </div>
 
-        <!-- HOW SAVING WORKS ─────────────────────────────── -->
-        <div class="settings-section-label">How your data is saved</div>
+    <div class="settings-body">
 
-        <div class="settings-explainer-card">
+      <div class="settings-group">
+        <div class="settings-group-label">Appearance</div>
+
+        <div class="settings-toggle-row">
+          <div class="settings-toggle-left">
+            <span class="settings-toggle-icon" id="sp-theme-icon">${isDark ? '🌙' : '☀️'}</span>
+            <div>
+              <div class="settings-toggle-label">Dark mode</div>
+              <div class="settings-toggle-desc">Switch between light and dark theme</div>
+            </div>
+          </div>
+          <button class="mini-toggle ${isDark ? 'on' : ''}" id="sp-theme-toggle"
+                  aria-label="Dark mode" aria-pressed="${isDark}">
+            <div class="mini-toggle-knob"></div>
+          </button>
+        </div>
+
+        <div class="settings-toggle-row">
+          <div class="settings-toggle-left">
+            <span class="settings-toggle-icon">🗂️</span>
+            <div>
+              <div class="settings-toggle-label">Card view</div>
+              <div class="settings-toggle-desc">Choose how notes are displayed</div>
+            </div>
+          </div>
+          <div class="settings-segmented">
+            <button class="settings-seg-btn ${isGrid ? 'active' : ''}" id="sp-view-grid">
+              <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+              Grid
+            </button>
+            <button class="settings-seg-btn ${!isGrid ? 'active' : ''}" id="sp-view-list">
+              <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+              List
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-group">
+        <div class="settings-group-label">Organisation</div>
+        <div class="settings-toggle-row">
+          <div class="settings-toggle-left">
+            <span class="settings-toggle-icon">🌙</span>
+            <div>
+              <div class="settings-toggle-label">Ambient sorting</div>
+              <div class="settings-toggle-desc">Morning = notes · Afternoon = links · Evening = code</div>
+            </div>
+          </div>
+          <button class="mini-toggle ${isAmbient ? 'on' : ''}" id="sp-ambient-toggle"
+                  aria-label="Ambient sorting" aria-pressed="${isAmbient}">
+            <div class="mini-toggle-knob"></div>
+          </button>
+        </div>
+      </div>
+
+      <div class="settings-group">
+        <div class="settings-group-label">How your data is saved</div>
+        <div class="settings-explainer">
           <div class="settings-explainer-row">
             <span class="settings-explainer-icon">💾</span>
             <div class="settings-explainer-text">
-              <div class="settings-explainer-title">Auto-saves inside the app</div>
-              <div class="settings-explainer-body">
-                Every note, link, code snippet and sticky saves automatically the moment you tap Save — 
-                exactly like Samsung Notes or Apple Notes. Close the app, reopen it, everything is there.
-                No manual saving needed, ever.
-              </div>
+              <div class="settings-explainer-title">Saves automatically inside the app</div>
+              <div class="settings-explainer-body">Every note, link, snippet and sticky saves the moment you tap Save — exactly like Samsung Notes. Close the app, reopen it, everything is there. No manual saving needed, ever.</div>
             </div>
           </div>
           <div class="settings-explainer-divider"></div>
@@ -210,82 +280,126 @@ export async function showSettingsModal() {
             <span class="settings-explainer-icon">🗂️</span>
             <div class="settings-explainer-text">
               <div class="settings-explainer-title">Backup file is extra insurance</div>
-              <div class="settings-explainer-body">
-                The export/backup file is a separate safety net — not the main save. 
-                Think of it like a manual save to your Files app. Your notes are already safe 
-                inside the app. The backup gives you a copy in your own files too.
-              </div>
+              <div class="settings-explainer-body">The export file is a safety net — not the main save. Think of it as a copy in your Files app. Your notes are already safe inside the app.</div>
             </div>
           </div>
         </div>
+      </div>
 
-        <!-- STORAGE STATUS ───────────────────────────────── -->
-        <div class="settings-section-label" style="margin-top:18px">Storage status</div>
-        ${protectedBadge}
-        ${usageBar}
-        <p class="settings-fine-print">
-          Your data lives only on this device and is never sent anywhere. 
-          Nobody else can access it — not us, not anyone.
-        </p>
+      <div class="settings-group">
+        <div class="settings-group-label">Storage status</div>
+        <div class="settings-storage-card">
+          <div class="settings-storage-status">
+            <span class="settings-storage-icon">${storageIcon}</span>
+            <div class="settings-storage-text">
+              <div class="settings-storage-title">${storageTitle}</div>
+              <div class="settings-storage-detail ${detailClass}">${storageDetail}</div>
+            </div>
+          </div>
+          ${usageBar}
+        </div>
+      </div>
 
-        <!-- DATA ACTIONS ─────────────────────────────────── -->
-        <div class="settings-section-label" style="margin-top:18px">Backup &amp; restore</div>
-
-        <button class="settings-action-row" id="s-export">
+      <div class="settings-group">
+        <div class="settings-group-label">Backup &amp; restore</div>
+        <button class="settings-action" id="sp-export">
           <span class="settings-action-icon">📤</span>
           <div class="settings-action-text">
             <div class="settings-action-title">Export backup</div>
             <div class="settings-action-desc">Save all your data as a file you keep</div>
           </div>
-          <span class="settings-action-arrow">›</span>
+          <span class="settings-action-chevron">›</span>
         </button>
-
-        <button class="settings-action-row" id="s-import">
+        <button class="settings-action" id="sp-import">
           <span class="settings-action-icon">📥</span>
           <div class="settings-action-text">
             <div class="settings-action-title">Restore from backup</div>
             <div class="settings-action-desc">Import a previously exported file</div>
           </div>
-          <span class="settings-action-arrow">›</span>
+          <span class="settings-action-chevron">›</span>
         </button>
+      </div>
 
-        <!-- WELCOME SCREEN ───────────────────────────────── -->
-        <div class="settings-section-label" style="margin-top:18px">Help</div>
-
-        <button class="settings-action-row" id="s-onboarding">
+      <div class="settings-group">
+        <div class="settings-group-label">Help</div>
+        <button class="settings-action" id="sp-onboarding">
           <span class="settings-action-icon">👋</span>
           <div class="settings-action-text">
             <div class="settings-action-title">Show welcome screen again</div>
-            <div class="settings-action-desc">Revisit the privacy and backup setup</div>
+            <div class="settings-action-desc">Revisit the privacy explanation and backup setup</div>
           </div>
-          <span class="settings-action-arrow">›</span>
+          <span class="settings-action-chevron">›</span>
         </button>
-      `;
+      </div>
 
-      // Wire buttons
-      overlay.querySelector('#s-close').addEventListener('click', close);
+      <div class="settings-version">Maké · V14 · All data stored locally on this device</div>
+    </div>
+  `;
 
-      overlay.querySelector('#s-export').addEventListener('click', () => {
-        close();
-        setTimeout(() => exportData(), 260);
-      });
+  document.body.appendChild(page);
+  requestAnimationFrame(() => page.classList.add('open'));
 
-      overlay.querySelector('#s-import').addEventListener('click', () => {
-        close();
-        setTimeout(() => importData(), 260);
-      });
+  const close = () => {
+    page.classList.remove('open');
+    setTimeout(() => page.remove(), 420);
+  };
 
-      overlay.querySelector('#s-onboarding').addEventListener('click', async () => {
-        close();
-        setTimeout(async () => {
-          const { resetOnboarding, showOnboarding } = await import('../features/onboarding.js');
-          resetOnboarding();
-          showOnboarding();
-        }, 260);
-      });
-    },
+  page.querySelector('#settings-back').addEventListener('click', close);
+
+  page.querySelector('#sp-theme-toggle').addEventListener('click', e => {
+    const btn = e.currentTarget;
+    const nowDark = btn.classList.toggle('on');
+    btn.setAttribute('aria-pressed', nowDark);
+    page.querySelector('#sp-theme-icon').textContent = nowDark ? '🌙' : '☀️';
+    localStorage.setItem('make_theme', nowDark ? 'dark' : 'light');
+    if (nowDark) document.documentElement.setAttribute('data-theme', 'dark');
+    else         document.documentElement.removeAttribute('data-theme');
+    document.getElementById('theme-toggle')?.classList.toggle('on', nowDark);
   });
+
+  page.querySelector('#sp-view-grid').addEventListener('click', () => {
+    state.viewMode = 'grid';
+    page.querySelector('#sp-view-grid').classList.add('active');
+    page.querySelector('#sp-view-list').classList.remove('active');
+  });
+  page.querySelector('#sp-view-list').addEventListener('click', () => {
+    state.viewMode = 'list';
+    page.querySelector('#sp-view-list').classList.add('active');
+    page.querySelector('#sp-view-grid').classList.remove('active');
+  });
+
+  page.querySelector('#sp-ambient-toggle').addEventListener('click', async e => {
+    const btn = e.currentTarget;
+    state.ambientEnabled = !state.ambientEnabled;
+    btn.classList.toggle('on', state.ambientEnabled);
+    btn.setAttribute('aria-pressed', state.ambientEnabled);
+    const { startAmbient, stopAmbient } = await import('../features/ambient.js');
+    state.ambientEnabled ? startAmbient() : stopAmbient();
+    document.getElementById('ambient-mini-toggle')?.classList.toggle('on', state.ambientEnabled);
+  });
+
+  page.querySelector('#sp-export').addEventListener('click', () => {
+    close(); setTimeout(() => exportData(), 420);
+  });
+  page.querySelector('#sp-import').addEventListener('click', () => {
+    close(); setTimeout(() => importData(), 420);
+  });
+
+  page.querySelector('#sp-onboarding').addEventListener('click', async () => {
+    close();
+    setTimeout(async () => {
+      const { resetOnboarding, showOnboarding } = await import('../features/onboarding.js');
+      resetOnboarding();
+      showOnboarding();
+    }, 420);
+  });
+
+  const onKey = e => {
+    if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onKey); }
+  };
+  document.addEventListener('keydown', onKey);
 }
+
 
 // ── Context menu ──────────────────────────────────────────────
 //
