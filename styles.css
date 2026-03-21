@@ -470,3 +470,205 @@ body{background:var(--sage);color:#fff;font-family:var(--font-body);font-size:14
 .ob-dots{display:flex;align-items:center;justify-content:center;gap:7px;margin-top:20px;}
 .ob-dot{width:7px;height:7px;border-radius:50%;background:rgba(0,0,0,0.12);transition:background 250ms,transform 250ms var(--ease-spring);}
 .ob-dot.active{background:var(--rose);transform:scale(1.3);}
+
+/* ================================================================
+   SAVE AS SHEET (V13)
+   Bottom sheet that slides up with export format options.
+   ================================================================ */
+
+.save-as-overlay {
+  position: fixed; inset: 0; z-index: 1500;
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex; align-items: flex-end; justify-content: center;
+  opacity: 0; transition: opacity 280ms ease;
+}
+.save-as-overlay.open { opacity: 1; }
+
+.save-as-sheet {
+  background: var(--dark-modal);
+  border-radius: 24px 24px 0 0;
+  border: 1px solid rgba(255,255,255,0.09);
+  width: 100%; max-width: 520px;
+  padding: 14px 20px 36px;
+  transform: translateY(100%);
+  transition: transform 320ms cubic-bezier(0.22,0.25,0,1);
+  box-shadow: 0 -8px 40px rgba(0,0,0,0.35);
+}
+.save-as-sheet.open { transform: translateY(0); }
+
+.save-as-handle {
+  width: 36px; height: 4px;
+  background: rgba(255,255,255,0.18); border-radius: 2px;
+  margin: 0 auto 18px;
+}
+
+.save-as-title {
+  font-family: var(--font-body); font-size: 18px; font-weight: 700;
+  color: white; margin-bottom: 3px;
+}
+.save-as-subtitle {
+  font-size: 12px; color: rgba(255,255,255,0.38);
+  margin-bottom: 18px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.save-as-options {
+  display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px;
+}
+
+.save-as-option {
+  display: flex; align-items: center; gap: 14px;
+  width: 100%; padding: 14px 16px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.09);
+  border-radius: 14px;
+  cursor: pointer;
+  transition: background var(--dur-fast), border-color var(--dur-fast), transform var(--dur-fast);
+  text-align: left;
+}
+.save-as-option:active {
+  background: rgba(182,141,147,0.18);
+  border-color: rgba(182,141,147,0.38);
+  transform: scale(0.98);
+}
+
+.save-as-option-icon {
+  font-size: 24px; flex-shrink: 0; line-height: 1;
+}
+.save-as-option-text { flex: 1; }
+.save-as-option-label {
+  font-size: 15px; font-weight: 600; color: white; margin-bottom: 2px;
+}
+.save-as-option-desc {
+  font-size: 12px; color: rgba(255,255,255,0.42); line-height: 1.4;
+}
+.save-as-option-ext {
+  font-family: var(--font-mono); font-size: 11px; font-weight: 600;
+  color: var(--rose-light);
+  background: rgba(182,141,147,0.15);
+  padding: 3px 8px; border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.save-as-cancel {
+  width: 100%; padding: 13px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.09);
+  border-radius: 12px;
+  color: rgba(255,255,255,0.55);
+  font-size: 15px; font-weight: 500;
+  font-family: var(--font-body);
+  cursor: pointer;
+  transition: background var(--dur-fast), color var(--dur-fast);
+}
+.save-as-cancel:active { background: rgba(255,255,255,0.10); color: white; }
+
+/* ================================================================
+   SETTINGS MODAL — V13 redesign
+   ================================================================ */
+
+.settings-section-label {
+  font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.32);
+  text-transform: uppercase; letter-spacing: 1px;
+  margin-bottom: 8px; padding: 0 2px;
+}
+
+/* Explainer card — "How saving works" */
+.settings-explainer-card {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.09);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.settings-explainer-row {
+  display: flex; align-items: flex-start; gap: 13px;
+  padding: 14px 16px;
+}
+.settings-explainer-icon {
+  font-size: 22px; flex-shrink: 0; margin-top: 1px; line-height: 1;
+}
+.settings-explainer-title {
+  font-size: 13px; font-weight: 700; color: white; margin-bottom: 5px;
+}
+.settings-explainer-body {
+  font-size: 12px; color: rgba(255,255,255,0.45); line-height: 1.6;
+}
+.settings-explainer-divider {
+  height: 1px; background: rgba(255,255,255,0.07); margin: 0 16px;
+}
+
+/* Protection badge */
+.settings-badge {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 7px 14px; border-radius: 10px;
+  font-size: 13px; font-weight: 600;
+  margin-bottom: 8px; width: 100;
+}
+.settings-badge--green {
+  background: rgba(61,153,112,0.14);
+  border: 1px solid rgba(61,153,112,0.28);
+  color: #6dd4a4;
+}
+.settings-badge--amber {
+  background: rgba(230,126,34,0.12);
+  border: 1px solid rgba(230,126,34,0.28);
+  color: #e8a86a;
+}
+.settings-badge--grey {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.10);
+  color: rgba(255,255,255,0.45);
+}
+
+/* Usage bar */
+.settings-usage-row {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 8px;
+}
+.settings-usage-bar-wrap {
+  flex: 1; height: 5px;
+  background: rgba(255,255,255,0.09); border-radius: 999px; overflow: hidden;
+}
+.settings-usage-bar {
+  height: 100%; background: var(--rose);
+  border-radius: 999px; transition: width 500ms var(--ease-out);
+}
+.settings-usage-label {
+  font-family: var(--font-mono); font-size: 11px;
+  color: rgba(255,255,255,0.32); flex-shrink: 0;
+}
+
+/* Fine print */
+.settings-fine-print {
+  font-size: 11px; color: rgba(255,255,255,0.28);
+  line-height: 1.6; padding: 0 2px;
+}
+
+/* Action rows — export, import, onboarding */
+.settings-action-row {
+  display: flex; align-items: center; gap: 13px;
+  width: 100%; padding: 13px 14px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background var(--dur-fast), border-color var(--dur-fast);
+  margin-bottom: 8px;
+  text-align: left;
+}
+.settings-action-row:active {
+  background: rgba(182,141,147,0.14);
+  border-color: rgba(182,141,147,0.28);
+}
+.settings-action-icon { font-size: 20px; flex-shrink: 0; line-height: 1; }
+.settings-action-text { flex: 1; }
+.settings-action-title {
+  font-size: 14px; font-weight: 600; color: white; margin-bottom: 2px;
+}
+.settings-action-desc {
+  font-size: 12px; color: rgba(255,255,255,0.38);
+}
+.settings-action-arrow {
+  font-size: 20px; color: rgba(255,255,255,0.22); flex-shrink: 0;
+}

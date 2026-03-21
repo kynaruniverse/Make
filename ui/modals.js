@@ -1,6 +1,11 @@
 /**
- * MAKÉ UI — modals.js
- * Modal factory, link modal, sticky modal, settings modal, context menu.
+ * MAKÉ UI — modals.js (V13)
+ *
+ * V13 changes:
+ *   – Context menu: "Save As" option added for all item types
+ *   – Settings modal: completely rewritten with clearer storage explanation,
+ *     storage status panel, and "Show welcome screen again" button
+ *   – openModal factory: unchanged
  */
 
 import { state, upsertItemInState, removeItemFromState } from '../core/state.js';
@@ -11,13 +16,6 @@ import { STICKY_COLORS }                                  from './stickies.js';
 
 // ── Modal factory ─────────────────────────────────────────────
 
-/**
- * openModal({ title, fields, actions, onReady })
- * Renders a centred sheet modal and returns { overlay, close }.
- *
- * fields[] types: 'input' | 'textarea' | 'select' | 'swatches'
- * actions[] shape: { id, label, primary?, danger? }
- */
 export function openModal({ title, fields, actions, onReady }) {
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
@@ -92,12 +90,13 @@ export function showLinkModal(existingItem = null) {
         const url   = overlay.querySelector('#f-url')?.value.trim()   || '';
         const title = overlay.querySelector('#f-title')?.value.trim() || '';
         if (!url) { showToast('URL is required', true); return; }
+        const normalised = url.startsWith('http') ? url : `https://${url}`;
         let saved;
         if (existingItem) {
-          saved = await saveItem({ ...existingItem, url, title });
+          saved = await saveItem({ ...existingItem, url: normalised, title });
         } else {
           saved = await saveItem(createItem({
-            layer: ItemLayer.BACKGROUND, type: ItemType.LINK, url, title,
+            layer: ItemLayer.BACKGROUND, type: ItemType.LINK, url: normalised, title,
           }));
         }
         upsertItemInState(saved);
@@ -151,68 +150,146 @@ export function showStickyModal() {
 }
 
 // ── Settings modal ────────────────────────────────────────────
+//
+// V13 rewrite:
+//   – Clear explanation that notes auto-save internally (like Samsung Notes)
+//   – Backup file is explained as a "safety net", not the primary save
+//   – Storage status shows protected/not protected
+//   – "Show welcome screen again" button for easy onboarding reset
 
 export async function showSettingsModal() {
+  const { getPersistenceState, getStorageEstimate } = await import('../core/storage.js');
   const { exportData, importData } = _lazyDataModule();
 
-  // Grab storage info before rendering
-  const { getPersistenceState, getStorageEstimate } = await import('../core/storage.js');
   const persistState = getPersistenceState();
   const estimate     = await getStorageEstimate();
 
-  const persistIcon  = persistState === 'granted'     ? '🔒'
-                     : persistState === 'denied'       ? '⚠️'
-                     : persistState === 'unsupported'  ? 'ℹ️'
-                     : '⏳';
-  const persistLabel = persistState === 'granted'     ? 'Protected — safe from browser clear'
-                     : persistState === 'denied'       ? 'Not protected — install as app for safety'
-                     : persistState === 'unsupported'  ? 'Browser doesn\'t support persistence'
-                     : 'Checking…';
-  const persistCls   = persistState === 'granted' ? 'persist-ok' : persistState === 'denied' ? 'persist-warn' : 'persist-info';
+  // Protection badge
+  const protectedBadge = persistState === 'granted'
+    ? `<div class="settings-badge settings-badge--green">🔒 Data protected</div>`
+    : persistState === 'denied'
+      ? `<div class="settings-badge settings-badge--amber">⚠️ Install as app for full protection</div>`
+      : `<div class="settings-badge settings-badge--grey">ℹ️ Checking storage status…</div>`;
 
-  const storageRow = estimate
-    ? `<div class="storage-usage-bar-wrap">
-         <div class="storage-usage-bar" style="width:${Math.min(estimate.percent,100)}%"></div>
-       </div>
-       <div class="storage-usage-label">${estimate.usageStr} used of ${estimate.quotaStr}</div>`
-    : '';
+  // Usage bar
+  const usageBar = estimate ? `
+    <div class="settings-usage-row">
+      <div class="settings-usage-bar-wrap">
+        <div class="settings-usage-bar" style="width:${Math.min(estimate.percent, 100)}%"></div>
+      </div>
+      <span class="settings-usage-label">${estimate.usageStr} of ${estimate.quotaStr} used</span>
+    </div>` : '';
 
   openModal({
     title: 'Settings',
     fields: [],
-    actions: [
-      { id: 's-export', label: '↓ Export backup' },
-      { id: 's-import', label: '↑ Import backup' },
-      { id: 's-close',  label: 'Done', primary: true },
-    ],
+    actions: [{ id: 's-close', label: 'Done', primary: true }],
     onReady: (overlay, close) => {
-      // Inject storage status above the actions
-      const actionsEl = overlay.querySelector('.modal-actions');
-      const statusEl  = document.createElement('div');
-      statusEl.className = 'storage-status-block';
-      statusEl.innerHTML = `
-        <div class="storage-status-row ${persistCls}">
-          <span class="storage-status-icon">${persistIcon}</span>
-          <div class="storage-status-text">
-            <div class="storage-status-title">Data protection</div>
-            <div class="storage-status-detail">${persistLabel}</div>
+
+      // Build rich content inside the modal
+      const content = overlay.querySelector('.modal-content');
+      content.innerHTML = `
+
+        <!-- HOW SAVING WORKS ─────────────────────────────── -->
+        <div class="settings-section-label">How your data is saved</div>
+
+        <div class="settings-explainer-card">
+          <div class="settings-explainer-row">
+            <span class="settings-explainer-icon">💾</span>
+            <div class="settings-explainer-text">
+              <div class="settings-explainer-title">Auto-saves inside the app</div>
+              <div class="settings-explainer-body">
+                Every note, link, code snippet and sticky saves automatically the moment you tap Save — 
+                exactly like Samsung Notes or Apple Notes. Close the app, reopen it, everything is there.
+                No manual saving needed, ever.
+              </div>
+            </div>
+          </div>
+          <div class="settings-explainer-divider"></div>
+          <div class="settings-explainer-row">
+            <span class="settings-explainer-icon">🗂️</span>
+            <div class="settings-explainer-text">
+              <div class="settings-explainer-title">Backup file is extra insurance</div>
+              <div class="settings-explainer-body">
+                The export/backup file is a separate safety net — not the main save. 
+                Think of it like a manual save to your Files app. Your notes are already safe 
+                inside the app. The backup gives you a copy in your own files too.
+              </div>
+            </div>
           </div>
         </div>
-        ${storageRow}
-        <div class="storage-status-hint">
-          Your notes are stored <strong>only on this device</strong>.<br>
-          Use Export to save a backup file you can restore anytime.
-        </div>`;
-      actionsEl.parentNode.insertBefore(statusEl, actionsEl);
 
+        <!-- STORAGE STATUS ───────────────────────────────── -->
+        <div class="settings-section-label" style="margin-top:18px">Storage status</div>
+        ${protectedBadge}
+        ${usageBar}
+        <p class="settings-fine-print">
+          Your data lives only on this device and is never sent anywhere. 
+          Nobody else can access it — not us, not anyone.
+        </p>
+
+        <!-- DATA ACTIONS ─────────────────────────────────── -->
+        <div class="settings-section-label" style="margin-top:18px">Backup &amp; restore</div>
+
+        <button class="settings-action-row" id="s-export">
+          <span class="settings-action-icon">📤</span>
+          <div class="settings-action-text">
+            <div class="settings-action-title">Export backup</div>
+            <div class="settings-action-desc">Save all your data as a file you keep</div>
+          </div>
+          <span class="settings-action-arrow">›</span>
+        </button>
+
+        <button class="settings-action-row" id="s-import">
+          <span class="settings-action-icon">📥</span>
+          <div class="settings-action-text">
+            <div class="settings-action-title">Restore from backup</div>
+            <div class="settings-action-desc">Import a previously exported file</div>
+          </div>
+          <span class="settings-action-arrow">›</span>
+        </button>
+
+        <!-- WELCOME SCREEN ───────────────────────────────── -->
+        <div class="settings-section-label" style="margin-top:18px">Help</div>
+
+        <button class="settings-action-row" id="s-onboarding">
+          <span class="settings-action-icon">👋</span>
+          <div class="settings-action-text">
+            <div class="settings-action-title">Show welcome screen again</div>
+            <div class="settings-action-desc">Revisit the privacy and backup setup</div>
+          </div>
+          <span class="settings-action-arrow">›</span>
+        </button>
+      `;
+
+      // Wire buttons
       overlay.querySelector('#s-close').addEventListener('click', close);
-      overlay.querySelector('#s-export').addEventListener('click', () => { exportData(); close(); });
-      overlay.querySelector('#s-import').addEventListener('click', () => { importData(); close(); });
+
+      overlay.querySelector('#s-export').addEventListener('click', () => {
+        close();
+        setTimeout(() => exportData(), 260);
+      });
+
+      overlay.querySelector('#s-import').addEventListener('click', () => {
+        close();
+        setTimeout(() => importData(), 260);
+      });
+
+      overlay.querySelector('#s-onboarding').addEventListener('click', async () => {
+        close();
+        setTimeout(async () => {
+          const { resetOnboarding, showOnboarding } = await import('../features/onboarding.js');
+          resetOnboarding();
+          showOnboarding();
+        }, 260);
+      });
     },
   });
 }
 
 // ── Context menu ──────────────────────────────────────────────
+//
+// V13: "Save As" added as a menu option for all item types.
 
 export function showContextMenu(evt, item) {
   document.getElementById('ctx-overlay')?.remove();
@@ -226,27 +303,36 @@ export function showContextMenu(evt, item) {
   menu.id = 'ctx-menu';
   menu.className = 'context-menu';
 
-  menu.innerHTML = [
-    { label: item.isFavorited ? '♡ Unfavorite' : '♡ Favorite', action: 'favorite'   },
-    { label: '⎘ Duplicate',                                      action: 'duplicate'  },
-    { label: '✎ Edit',                                           action: 'edit'       },
+  // Build menu items — Save As only for items that have content to export
+  const menuItems = [
+    { label: item.isFavorited ? '⭐ Unfavourite' : '☆ Favourite', action: 'favorite' },
+    { label: '⎘ Duplicate',  action: 'duplicate' },
+    { label: '✎ Edit',       action: 'edit'      },
+    { label: '↗ Save as…',   action: 'saveas'    },
     { divider: true },
-    { label: '⌦ Delete',                                         action: 'delete', destructive: true },
-  ].map(a => a.divider
+    { label: '🗑 Delete', action: 'delete', destructive: true },
+  ];
+
+  menu.innerHTML = menuItems.map(a => a.divider
     ? `<div class="context-menu-divider"></div>`
     : `<button class="context-menu-item ${a.destructive ? 'destructive' : ''}" data-action="${a.action}">${a.label}</button>`
   ).join('');
 
+  // Position near tap/click, clamped to viewport
   const x = evt.clientX ?? window.innerWidth  / 2;
   const y = evt.clientY ?? window.innerHeight / 2;
-  menu.style.left = `${Math.min(x, window.innerWidth  - 200)}px`;
-  menu.style.top  = `${Math.min(y, window.innerHeight - 200)}px`;
+  menu.style.left = `${Math.max(8, Math.min(x, window.innerWidth  - 210))}px`;
+  menu.style.top  = `${Math.max(8, Math.min(y, window.innerHeight - 250))}px`;
 
   document.body.appendChild(overlay);
   document.body.appendChild(menu);
 
   const dismiss = () => { overlay.remove(); menu.remove(); };
   overlay.addEventListener('click', dismiss);
+
+  // Escape closes
+  const onKey = e => { if (e.key === 'Escape') { dismiss(); document.removeEventListener('keydown', onKey); } };
+  document.addEventListener('keydown', onKey);
 
   menu.querySelectorAll('.context-menu-item').forEach(btn => {
     btn.addEventListener('click', async () => {
@@ -267,6 +353,7 @@ export function showContextMenu(evt, item) {
       } else if (action === 'favorite') {
         item.isFavorited = !item.isFavorited;
         upsertItemInState(await saveItem(item));
+        showToast(item.isFavorited ? 'Added to favourites' : 'Removed from favourites');
 
       } else if (action === 'duplicate') {
         const dup = createItem({
@@ -278,15 +365,20 @@ export function showContextMenu(evt, item) {
         upsertItemInState(await saveItem(dup));
         showToast('Duplicated');
 
+      } else if (action === 'saveas') {
+        const { showSaveAsSheet } = await import('../features/save-as.js');
+        showSaveAsSheet(item);
+
       } else if (action === 'delete') {
         await deleteItem(item.id);
         removeItemFromState(item.id);
+        showToast('Deleted');
       }
     });
   });
 }
 
-// ── Lazy import helper ────────────────────────────────────────
+// ── Lazy data module ──────────────────────────────────────────
 
 function _lazyDataModule() {
   let _mod = null;

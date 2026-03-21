@@ -199,3 +199,13 @@ export function showOnboarding() {
     });
   });
 }
+
+/**
+ * resetOnboarding()
+ * Clears the onboarded flag so the welcome screen shows again on next call
+ * to showOnboarding(). Called from the Settings modal "Show welcome screen again" button.
+ * No page reload needed — showOnboarding() can be called directly after this.
+ */
+export function resetOnboarding() {
+  localStorage.removeItem(ONBOARDED_KEY);
+}
