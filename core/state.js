@@ -1,9 +1,11 @@
 /**
  * MAKÉ CORE — state.js (V3)
+ * Reactive state store.
+ *
  * Changes from V2:
- * - FIX: filterFavourites is now a proper getter/setter persisted to
- *   localStorage instead of a raw _data mutation.  Refresh no longer
- *   resets the favourites filter.
+ *   - FIX: filterFavourites is now a proper getter/setter persisted to
+ *     localStorage instead of a raw _data mutation.  Refresh no longer
+ *     resets the favourites filter.
  */
 
 import { getAllItems } from './storage.js';
@@ -29,7 +31,7 @@ export const state = {
     currentTab:       prefs.currentTab       || 'notes',
     showAddMenu:      false,
     ambientEnabled:   prefs.ambientEnabled   ?? false,
-    filterFavourites: prefs.filterFavourites ?? false,   // FIX: initialised from prefs
+    filterFavourites: prefs.filterFavourites ?? false,
     sortField:        prefs.sortField        || 'updatedAt',
     sortDir:          prefs.sortDir          || 'desc',
     viewMode:         prefs.viewMode         || 'grid',
@@ -53,7 +55,6 @@ export const state = {
   get ambientEnabled()  { return this._data.ambientEnabled; },
   set ambientEnabled(v) { this._data.ambientEnabled = v; savePrefs({ ambientEnabled: v }); this._notify(); },
 
-  // FIX: filterFavourites is now a proper persisted setter, not a raw _data mutation.
   get filterFavourites()  { return this._data.filterFavourites; },
   set filterFavourites(v) { this._data.filterFavourites = v; savePrefs({ filterFavourites: v }); this._notify(); },
 

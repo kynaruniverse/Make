@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+
 /**
  * scripts/build-hash.js
  *
@@ -23,8 +24,8 @@
 
 'use strict';
 
-const fs     = require('fs');
-const path   = require('path');
+const fs = require('fs');
+const path = require('path');
 const crypto = require('crypto');
 
 const ROOT = path.resolve(__dirname, '..');
@@ -64,9 +65,9 @@ for (const rel of PRECACHE_FILES) {
     console.warn(`  [warn] not found: ${rel}`);
   }
 }
-const digest  = hash.digest('hex').slice(0, 8);
-const swPath  = path.join(ROOT, 'service-worker.js');
-let   swSrc   = fs.readFileSync(swPath, 'utf8');
+const digest = hash.digest('hex').slice(0, 8);
+const swPath = path.join(ROOT, 'service-worker.js');
+let swSrc = fs.readFileSync(swPath, 'utf8');
 
 // Replace both the placeholder and any previous hash.
 swSrc = swSrc.replace(
