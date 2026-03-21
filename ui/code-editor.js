@@ -1,218 +1,207 @@
 /**
- * MAKÉ UI — code-editor.js (V1)
- * Full-screen code editor using the highlight-overlay pattern.
+ * MAKÉ UI — code-editor.js
+ * Full-screen code editor with syntax highlighting.
  *
- * Architecture:
- *   A transparent <textarea> sits on top of a <pre> element.
- *   The <pre> renders syntax-highlighted HTML via utils/syntax.js.
- *   The <textarea> owns all cursor / selection / input behaviour.
- *   Scroll events are mirrored from the textarea to the <pre> so
- *   highlighted text never drifts out of alignment.
- *
- * Features:
- *   – 16 languages with one-tap switching
- *   – Line number gutter (synced with textarea scroll)
- *   – Tab key inserts 2 spaces (no focus loss)
- *   – Cursor position shown in status bar (Ln / Col)
- *   – One-click copy to clipboard
- *   – Ctrl/Cmd+S to save, Escape to close
+ * Changes:
+ * - Syntax highlighting via utils/syntax.js (overlay pattern).
+ *   The textarea accepts input; a <pre> mirror behind it displays
+ *   coloured tokens.  The textarea background is transparent so the
+ *   user sees highlighted code while the caret and selection still work.
  */
 
 import { state, upsertItemInState } from '../core/state.js';
 import { saveItem }                  from '../core/storage.js';
-import { createItem }                from '../core/schema.js';
+import { createItem, ItemType, ItemLayer } from '../core/schema.js';
 import { esc, showToast }            from '../utils/helpers.js';
 import { highlight }                 from '../utils/syntax.js';
 
-const LANGS = [
-  'javascript','typescript','python','html','css',
-  'json','bash','sql','java','rust','go','swift',
-  'kotlin','cpp','markdown','plaintext',
+const LANGUAGES = [
+  'javascript','typescript','python','html','css','bash','json',
+  'sql','java','swift','kotlin','rust','go','cpp','markdown','plaintext',
 ];
 
-export function showCodeEditor(existing = null) {
-  if (document.getElementById('code-editor-page')) return;
-
-  let currentLang = existing?.language || 'javascript';
+export function showCodeEditor(existingItem = null) {
+  document.getElementById('code-editor-page')?.remove();
 
   const page = document.createElement('div');
-  page.id        = 'code-editor-page';
   page.className = 'editor-page code-editor-page';
-  page.setAttribute('role', 'dialog');
-  page.setAttribute('aria-modal', 'true');
-  page.setAttribute('aria-label', existing ? 'Edit snippet' : 'New snippet');
+  page.id = 'code-editor-page';
+
+  const currentLang = existingItem?.language || 'javascript';
+  const currentCode = existingItem?.code     || '';
 
   page.innerHTML = `
     <div class="editor-topbar code-topbar">
-      <button class="editor-back-btn" id="code-back" aria-label="Back">
+      <button class="editor-back-btn" id="code-back">
         <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
       </button>
-      <input class="code-filename-input" id="code-title"
-             placeholder="snippet title…" autocomplete="off"
-             value="${esc(existing?.title || '')}">
+      <input class="code-filename-input" id="code-title" placeholder="filename.js"
+             value="${esc(existingItem?.title || '')}" autocomplete="off" spellcheck="false">
       <button class="editor-save-btn" id="code-save">Save</button>
     </div>
 
-    <div class="code-lang-strip" id="code-lang-strip" role="tablist" aria-label="Language">
-      ${LANGS.map(l =>
-        `<button class="lang-tag ${l === currentLang ? 'active' : ''}"
-                 data-lang="${l}" role="tab"
-                 aria-selected="${l === currentLang}">${l}</button>`
+    <div class="code-lang-strip" id="code-lang-strip">
+      ${LANGUAGES.map(l =>
+        `<button class="lang-tag ${l === currentLang ? 'active' : ''}" data-lang="${l}">${l}</button>`
       ).join('')}
     </div>
 
-    <div class="code-editor-frame">
-      <div class="code-gutter" id="code-gutter" aria-hidden="true"></div>
+    <div class="code-editor-frame" id="code-editor-frame">
+      <div class="code-gutter" id="code-gutter"></div>
       <div class="code-highlight-wrap">
+        <!-- Syntax highlight mirror (behind textarea) -->
         <pre class="code-highlight" id="code-highlight" aria-hidden="true"></pre>
-        <textarea
-          class="code-textarea code-textarea--transparent"
-          id="code-area"
-          spellcheck="false"
-          autocorrect="off"
-          autocapitalize="off"
-          autocomplete="off"
-          wrap="off"
-          aria-label="Code content"
-          placeholder="// Start coding…"
-        >${esc(existing?.code || '')}</textarea>
+        <textarea class="code-textarea code-textarea--transparent" id="code-textarea"
+                  placeholder="// Start coding…"
+                  spellcheck="false"
+                  autocomplete="off"
+                  autocorrect="off"
+                  autocapitalize="off">${esc(currentCode)}</textarea>
       </div>
     </div>
 
-    <div class="code-statusbar" aria-live="polite">
+    <div class="code-statusbar">
       <span class="code-status-lang" id="code-status-lang">${currentLang}</span>
       <span class="code-status-pos"  id="code-status-pos">Ln 1, Col 1</span>
-      <button class="code-copy-btn" id="code-copy" aria-label="Copy code">
-        <svg width="12" height="12" viewBox="0 0 24 24">
-          <rect x="9" y="9" width="13" height="13" rx="2"/>
-          <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
-        </svg>
+      <button class="code-copy-btn" id="code-copy">
+        <svg viewBox="0 0 24 24" width="13" height="13"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
         Copy
       </button>
-    </div>`;
+    </div>
+  `;
 
   document.body.appendChild(page);
   requestAnimationFrame(() => page.classList.add('open'));
 
-  const area      = page.querySelector('#code-area');
-  const hlPre     = page.querySelector('#code-highlight');
+  let selectedLang = currentLang;
+
+  const textarea  = page.querySelector('#code-textarea');
+  const highlight_ = page.querySelector('#code-highlight');
   const gutter    = page.querySelector('#code-gutter');
   const statusPos = page.querySelector('#code-status-pos');
-  const statusLng = page.querySelector('#code-status-lang');
+  const statusLang = page.querySelector('#code-status-lang');
 
-  // ── Sync highlight + gutter ───────────────────────────────────
-  const _sync = () => {
-    const code  = area.value;
-    // Trailing newline prevents the last line from causing a height/scroll mismatch
-    hlPre.innerHTML = highlight(code, currentLang) + '\n';
-    // Line numbers
-    const lineCount = (code.match(/\n/g) || []).length + 1;
-    gutter.innerHTML = Array.from(
-      { length: lineCount },
-      (_, i) => `<div>${i + 1}</div>`
-    ).join('');
-    // Mirror scroll position
-    hlPre.scrollTop  = area.scrollTop;
-    hlPre.scrollLeft = area.scrollLeft;
-  };
+  // ── Highlight sync ────────────────────────────────────────────
 
-  const _syncPos = () => {
-    const val   = area.value;
-    const pos   = area.selectionStart;
-    const lines = val.slice(0, pos).split('\n');
+  function refreshHighlight() {
+    highlight_.innerHTML = highlight(textarea.value, selectedLang) + '\n';
+  }
+
+  // Sync textarea scroll to highlight mirror.
+  function syncScroll() {
+    highlight_.scrollTop  = textarea.scrollTop;
+    highlight_.scrollLeft = textarea.scrollLeft;
+    gutter.scrollTop      = textarea.scrollTop;
+  }
+
+  // ── Gutter ────────────────────────────────────────────────────
+
+  function updateGutter() {
+    const lines   = Math.max(textarea.value.split('\n').length, 20);
+    const current = gutter.children.length;
+    if (lines > current) {
+      const frag = document.createDocumentFragment();
+      for (let i = current + 1; i <= lines; i++) {
+        const d = document.createElement('div');
+        d.textContent = i;
+        frag.appendChild(d);
+      }
+      gutter.appendChild(frag);
+    } else if (lines < current) {
+      while (gutter.children.length > lines) gutter.lastChild.remove();
+    }
+  }
+
+  function updatePos() {
+    const val   = textarea.value;
+    const pos   = textarea.selectionStart;
+    const lines = val.substring(0, pos).split('\n');
     statusPos.textContent = `Ln ${lines.length}, Col ${lines[lines.length - 1].length + 1}`;
-  };
+  }
 
-  const _syncScroll = () => {
-    hlPre.scrollTop  = area.scrollTop;
-    hlPre.scrollLeft = area.scrollLeft;
-    // Also scroll gutter to match vertical position
-    gutter.scrollTop = area.scrollTop;
-  };
+  // ── Events ────────────────────────────────────────────────────
 
-  area.addEventListener('input',  _sync);
-  area.addEventListener('scroll', _syncScroll);
-  area.addEventListener('keyup',  _syncPos);
-  area.addEventListener('click',  _syncPos);
-  area.addEventListener('focus',  _syncPos);
+  textarea.addEventListener('input', () => {
+    updateGutter();
+    updatePos();
+    refreshHighlight();
+  });
 
-  // ── Tab key → 2 spaces ────────────────────────────────────────
-  area.addEventListener('keydown', e => {
+  textarea.addEventListener('scroll', syncScroll);
+  textarea.addEventListener('click',  updatePos);
+  textarea.addEventListener('keyup',  updatePos);
+
+  textarea.addEventListener('keydown', e => {
     if (e.key === 'Tab') {
       e.preventDefault();
-      const start = area.selectionStart;
-      const end   = area.selectionEnd;
-      area.value  = area.value.slice(0, start) + '  ' + area.value.slice(end);
-      area.selectionStart = area.selectionEnd = start + 2;
-      _sync();
-      _syncPos();
+      const s = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      textarea.value = textarea.value.substring(0, s) + '  ' + textarea.value.substring(end);
+      textarea.selectionStart = textarea.selectionEnd = s + 2;
+      updateGutter();
+      refreshHighlight();
+    }
+
+    // Auto-close brackets / quotes.
+    const pairs = { '(':')', '[':']', '{':'}', '"':'"', "'":"'", '`':'`' };
+    if (pairs[e.key]) {
+      e.preventDefault();
+      const s        = textarea.selectionStart;
+      const end      = textarea.selectionEnd;
+      const selected = textarea.value.substring(s, end);
+      textarea.value =
+        textarea.value.substring(0, s) + e.key + selected + pairs[e.key] + textarea.value.substring(end);
+      textarea.selectionStart = textarea.selectionEnd = s + 1;
     }
   });
 
-  // Initial render
-  _sync();
-  _syncPos();
-
-  // ── Language selector ─────────────────────────────────────────
+  // Language selector.
   page.querySelector('#code-lang-strip').addEventListener('click', e => {
-    const btn = e.target.closest('[data-lang]');
-    if (!btn) return;
-    currentLang = btn.dataset.lang;
-    page.querySelectorAll('.lang-tag').forEach(b => {
-      b.classList.toggle('active', b.dataset.lang === currentLang);
-      b.setAttribute('aria-selected', b.dataset.lang === currentLang);
-    });
-    statusLng.textContent = currentLang;
-    _sync();
+    const tag = e.target.closest('.lang-tag');
+    if (!tag) return;
+    page.querySelectorAll('.lang-tag').forEach(t => t.classList.remove('active'));
+    tag.classList.add('active');
+    selectedLang = tag.dataset.lang;
+    statusLang.textContent = selectedLang;
+    refreshHighlight();
   });
 
-  // ── Copy ──────────────────────────────────────────────────────
-  page.querySelector('#code-copy').addEventListener('click', async () => {
-    const copyBtn = page.querySelector('#code-copy');
-    try {
-      await navigator.clipboard.writeText(area.value);
-      const orig = copyBtn.innerHTML;
-      copyBtn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24">
-        <polyline points="20 6 9 17 4 12"/>
-      </svg> Copied!`;
-      setTimeout(() => { copyBtn.innerHTML = orig; }, 1800);
-    } catch {
-      showToast('Copy failed — check clipboard permissions', true);
-    }
+  // Copy.
+  page.querySelector('#code-copy').addEventListener('click', () => {
+    navigator.clipboard?.writeText(textarea.value)
+      .then(() => showToast('Copied to clipboard'))
+      .catch(() => showToast('Copy failed', true));
   });
 
-  // ── Save ──────────────────────────────────────────────────────
-  const _save = async () => {
-    const title    = page.querySelector('#code-title').value.trim() || 'Untitled';
-    const code     = area.value;
-    const item     = existing
-      ? { ...existing, title, code, language: currentLang }
-      : createItem({ type: 'code', layer: 'background', title, code, language: currentLang });
-    try {
-      const saved = await saveItem(item);
-      upsertItemInState(saved);
-      showToast(existing ? 'Snippet saved' : 'Snippet created');
-      _close();
-    } catch (err) {
-      console.error('[CodeEditor] Save failed:', err);
-      showToast('Save failed', true);
-    }
-  };
+  // ── Save / Close ─────────────────────────────────────────────
 
-  const _close = () => {
+  const close = () => {
     page.classList.remove('open');
-    setTimeout(() => page.remove(), 420);
+    setTimeout(() => page.remove(), 320);
   };
 
-  page.querySelector('#code-save').addEventListener('click', _save);
-  page.querySelector('#code-back').addEventListener('click', _close);
+  page.querySelector('#code-back').addEventListener('click', close);
 
-  // ── Keyboard shortcuts ────────────────────────────────────────
-  page.addEventListener('keydown', e => {
-    if (e.key === 'Escape' && e.target !== area) { _close(); return; }
-    if ((e.metaKey || e.ctrlKey) && e.key === 's') { e.preventDefault(); _save(); }
+  page.querySelector('#code-save').addEventListener('click', async () => {
+    const title = page.querySelector('#code-title').value.trim();
+    const code  = textarea.value;
+    if (!title && !code.trim()) { close(); return; }
+    let saved;
+    if (existingItem) {
+      saved = await saveItem({ ...existingItem, title, code, language: selectedLang });
+    } else {
+      saved = await saveItem(createItem({
+        layer: ItemLayer.BACKGROUND, type: ItemType.CODE, title, code, language: selectedLang,
+      }));
+    }
+    upsertItemInState(saved);
+    showToast(existingItem ? 'Code updated' : 'Code saved');
+    close();
   });
 
-  // ── Initial focus ─────────────────────────────────────────────
-  setTimeout(() => area.focus(), 430);
+  // ── Initial state ─────────────────────────────────────────────
+
+  updateGutter();
+  refreshHighlight();
+  setTimeout(() => textarea.focus(), 380);
 }

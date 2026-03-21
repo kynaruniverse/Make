@@ -1,226 +1,229 @@
 /**
- * MAKÉ UI — cards.js (V1)
- * Background-layer card grid + link button grid.
- *
- * Responsibilities:
- *   – Filter items by currentTab, filterFavourites
- *   – Sort by sortField / sortDir
- *   – Render note/code cards (grid or list view) and link buttons
- *   – Wire click → editor/modal, long-press → context menu, fav toggle
+ * MAKÉ UI — cards.js
+ * Background-layer card grid: rendering, filtering, sorting, interaction.
  */
 
 import { state, upsertItemInState } from '../core/state.js';
-import { saveItem }                  from '../core/storage.js';
-import { esc, relativeDate, showToast, emptyIcon, iNote, iCode, iLink } from '../utils/helpers.js';
+import { saveItem, deleteItem }      from '../core/storage.js';
+import { ItemType }                  from '../core/schema.js';
+import { esc, relativeDate, emptyIcon, iNote, iCode, iLink } from '../utils/helpers.js';
 
-// ── Filtering & sorting ───────────────────────────────────────
+// Imported lazily at call-time to avoid circular-import init issues.
+function getEditors() {
+  return import('./note-editor.js').then(m => m).catch(() => null);
+}
+function getModals() {
+  return import('./modals.js').then(m => m).catch(() => null);
+}
 
-function _filtered() {
+// ── Filtering / sorting ───────────────────────────────────────
+
+export function getFilteredItems() {
   const tab = state.currentTab;
-  let items = state.backgroundItems.filter(i =>
-    (tab === 'notes' && i.type === 'note') ||
-    (tab === 'code'  && i.type === 'code') ||
-    (tab === 'links' && i.type === 'link')
-  );
+  let items = state.backgroundItems.filter(i => {
+    if (tab === 'notes') return i.type === ItemType.NOTE;
+    if (tab === 'code')  return i.type === ItemType.CODE;
+    if (tab === 'links') return i.type === ItemType.LINK;
+    return true;
+  });
+
+  // FIX: use the proper getter instead of raw _data access.
   if (state.filterFavourites) items = items.filter(i => i.isFavorited);
-  const { sortField: sf, sortDir: sd } = state;
+
+  const field = state.sortField;
+  const dir   = state.sortDir;
   return [...items].sort((a, b) => {
-    let va = a[sf] ?? 0, vb = b[sf] ?? 0;
-    if (typeof va === 'string') { va = va.toLowerCase(); vb = vb.toLowerCase(); }
-    return sd === 'asc'
-      ? (va < vb ? -1 : va > vb ?  1 : 0)
-      : (va > vb ? -1 : va < vb ?  1 : 0);
+    if (field === 'title') {
+      const av = (a.title || '').toLowerCase();
+      const bv = (b.title || '').toLowerCase();
+      return dir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
+    }
+    const av = (field === 'createdAt' ? a.createdAt : a.updatedAt) || 0;
+    const bv = (field === 'createdAt' ? b.createdAt : b.updatedAt) || 0;
+    return dir === 'asc' ? av - bv : bv - av;
   });
 }
 
-// ── Type icon helper ──────────────────────────────────────────
+// ── Rendering ─────────────────────────────────────────────────
 
-function _typeIcon(type) {
-  if (type === 'note') return iNote();
-  if (type === 'code') return iCode();
-  return iLink();
+export function renderCards() {
+  const grid = document.getElementById('grid-container');
+  if (!grid) return;
+
+  // Keep nav active state in sync.
+  document.querySelectorAll('.nav-btn[data-tab]').forEach(btn =>
+    btn.classList.toggle('active', btn.dataset.tab === state.currentTab)
+  );
+
+  const items = getFilteredItems();
+
+  if (items.length === 0) {
+    grid.className = 'grid';
+    grid.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">${emptyIcon(state.currentTab)}</div>
+        <p class="empty-title">No ${state.currentTab} yet</p>
+        <p class="empty-hint">Tap <strong>+</strong> to add your first ${
+          state.currentTab === 'notes' ? 'note'
+          : state.currentTab === 'code' ? 'code snippet'
+          : 'link'
+        }</p>
+      </div>`;
+    return;
+  }
+
+  // Links tab — button grid layout.
+  if (state.currentTab === 'links') {
+    grid.className = 'links-grid';
+    grid.innerHTML = items.map(item => `
+      <a class="link-btn" data-id="${item.id}"
+         href="${esc(item.url || '#')}" target="_blank" rel="noopener noreferrer"
+         title="${esc(item.url || '')}">
+        <div class="link-btn-icon">
+          <svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+        </div>
+        <span class="link-btn-label">${esc(item.title || item.url || 'Link')}</span>
+      </a>
+    `).join('');
+    _attachLinkListeners();
+    return;
+  }
+
+  // Standard card grid — reuse existing DOM elements where possible.
+  grid.className = 'grid';
+  const existing = new Map();
+  grid.querySelectorAll('.card[data-id]').forEach(el => existing.set(+el.dataset.id, el));
+
+  const frag = document.createDocumentFragment();
+  items.forEach((item, i) => {
+    let el = existing.get(item.id);
+    if (!el) {
+      el = document.createElement('div');
+      el.className = 'card card-animate-in';
+      el.dataset.id   = item.id;
+      el.dataset.type = item.type;
+      el.style.animationDelay = `${i * 28}ms`;
+    }
+    el.dataset.type = item.type;
+    el.innerHTML    = _cardHTML(item);
+    frag.appendChild(el);
+  });
+
+  grid.innerHTML = '';
+  grid.appendChild(frag);
+  _attachCardListeners();
 }
 
 // ── Card HTML ─────────────────────────────────────────────────
 
 function _cardHTML(item) {
-  const preview = item.type === 'note'
-    ? (item.content || '').replace(/<[^>]+>/g, '')
-    : item.type === 'code'
-      ? (item.code || '')
-      : (item.url || '');
-  const tags = (item.tags || []).slice(0, 5);
+  const raw     = item.content || item.code || item.url || '';
+  const preview = raw.replace(/<[^>]*>/g, '').replace(/&[a-z]+;/gi, ' ').slice(0, 200);
+  const date     = item.updatedAt ? relativeDate(item.updatedAt) : '';
+  const tags     = item.tags?.length
+    ? `<div class="card-tags">${item.tags.map(t => `<span class="tag-chip">${esc(t)}</span>`).join('')}</div>`
+    : '';
+  const typeIcon  = item.type === 'note' ? iNote() : item.type === 'code' ? iCode() : iLink();
+  const typeLabel = item.type === 'note' ? 'Note' : item.type === 'code' ? 'Code' : 'Link';
+
   return `
     <div class="card-header">
-      <span class="card-type-badge">${_typeIcon(item.type)}</span>
-      <span class="card-type-label">${esc(item.title || 'Untitled')}</span>
-      <button class="card-fav ${item.isFavorited ? 'active' : ''}"
-              data-fav="${item.id}" aria-label="${item.isFavorited ? 'Unfavourite' : 'Favourite'}">
-        <svg viewBox="0 0 24 24">
-          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-        </svg>
+      <div class="card-type-badge">${typeIcon}</div>
+      <span class="card-type-label">${typeLabel}: ${esc(item.title || 'Untitled')}</span>
+    </div>
+    <div class="card-content">${esc(preview)}</div>
+    ${tags}
+    <div class="card-meta">
+      <span class="card-meta-time">${date}</span>
+      <button class="card-fav ${item.isFavorited ? 'active' : ''}" data-id="${item.id}"
+              aria-label="${item.isFavorited ? 'Unfavorite' : 'Favorite'}">
+        <svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
       </button>
     </div>
-    <div class="card-content">${item.type === 'note' ? (item.content || '') : esc(preview)}</div>
-    ${tags.length ? `<div class="card-tags">${tags.map(t => `<span class="tag-chip">${esc(t)}</span>`).join('')}</div>` : ''}
-    <div class="card-meta">
-      <span class="card-meta-time">${relativeDate(item.updatedAt)}</span>
-    </div>`;
+  `;
 }
 
-// ── Link button HTML ──────────────────────────────────────────
+// ── Listeners ─────────────────────────────────────────────────
 
-function _linkBtnHTML(item) {
-  let domain = '';
-  try { domain = new URL(item.url).hostname; } catch { /* ignore */ }
-  const faviconUrl = domain ? `https://www.google.com/s2/favicons?domain=${domain}&sz=64` : '';
-  const label = esc(item.title || domain || 'Link');
-
-  return `
-    <a class="link-btn" href="${esc(item.url)}" target="_blank" rel="noopener noreferrer"
-       data-id="${item.id}" data-type="link-btn">
-      <div class="link-btn-icon">
-        ${faviconUrl
-          ? `<img src="${faviconUrl}" width="28" height="28" alt=""
-                  style="border-radius:6px;object-fit:contain"
-                  onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
-          : ''}
-        <svg viewBox="0 0 24 24" style="${faviconUrl ? 'display:none' : ''}">
-          <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/>
-          <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/>
-        </svg>
-      </div>
-      <span class="link-btn-label">${label}</span>
-    </a>`;
-}
-
-// ── Main render ───────────────────────────────────────────────
-
-export function renderCards() {
-  const container = document.getElementById('grid-container');
-  if (!container) return;
-
-  const items   = _filtered();
-  const isLinks = state.currentTab === 'links';
-  const isList  = state.viewMode === 'list';
-
-  if (isLinks) {
-    _renderLinks(container, items);
-    return;
-  }
-
-  container.className = isList ? 'list-grid' : 'grid';
-
-  if (!items.length) {
-    container.innerHTML = `
-      <div class="empty-state">
-        <div class="empty-icon">${emptyIcon(state.currentTab)}</div>
-        <div class="empty-title">No ${state.currentTab} yet</div>
-        <div class="empty-hint">Tap <strong>+</strong> to create one</div>
-      </div>`;
-    return;
-  }
-
-  container.innerHTML = items.map((item, i) =>
-    `<div class="card card-animate-in" data-id="${item.id}" style="animation-delay:${i * 28}ms">
-       ${_cardHTML(item)}
-     </div>`
-  ).join('');
-
-  _wireCardEvents(container);
-}
-
-function _renderLinks(container, items) {
-  container.className = 'links-grid';
-
-  if (!items.length) {
-    container.innerHTML = `
-      <div class="empty-state">
-        <div class="empty-icon">${iLink()}</div>
-        <div class="empty-title">No links yet</div>
-        <div class="empty-hint">Tap <strong>+</strong> to add a link</div>
-      </div>`;
-    return;
-  }
-
-  container.innerHTML = items.map(i => _linkBtnHTML(i)).join('');
-
-  // Right-click / long-press → context menu (prevent navigation)
-  container.querySelectorAll('.link-btn[data-id]').forEach(btn => {
-    let pressTimer;
-    const id = +btn.dataset.id;
-
-    btn.addEventListener('contextmenu', e => {
-      e.preventDefault();
-      _showCtx(id, e.clientX, e.clientY);
-    });
-    btn.addEventListener('pointerdown', e => {
-      pressTimer = setTimeout(() => {
-        e.preventDefault();
-        btn.blur(); // prevent navigation
-        _showCtx(id, e.clientX, e.clientY);
-      }, 500);
-    });
-    btn.addEventListener('pointerup',   () => clearTimeout(pressTimer));
-    btn.addEventListener('pointermove', () => clearTimeout(pressTimer));
-  });
-}
-
-function _wireCardEvents(container) {
-  // Card click → open editor
-  container.querySelectorAll('.card[data-id]').forEach(card => {
-    let pressTimer;
-    const id = +card.dataset.id;
-
+function _attachCardListeners() {
+  document.querySelectorAll('.card[data-id]').forEach(card => {
     card.addEventListener('click', async e => {
-      if (e.target.closest('[data-fav]')) return;
-      clearTimeout(pressTimer);
-      const item = state.backgroundItems.find(i => i.id === id);
-      if (item) await _openItem(item);
+      if (e.target.closest('.card-fav')) return;
+      const item = state.backgroundItems.find(i => i.id === +card.dataset.id);
+      if (!item) return;
+      await _openEditor(item);
     });
 
-    card.addEventListener('contextmenu', e => {
+    card.addEventListener('contextmenu', async e => {
       e.preventDefault();
-      _showCtx(id, e.clientX, e.clientY);
+      const item = state.backgroundItems.find(i => i.id === +card.dataset.id);
+      if (item) {
+        const m = await getModals();
+        m?.showContextMenu(e, item);
+      }
     });
-    card.addEventListener('pointerdown', e => {
-      pressTimer = setTimeout(() => _showCtx(id, e.clientX, e.clientY), 500);
-    });
-    card.addEventListener('pointerup',   () => clearTimeout(pressTimer));
-    card.addEventListener('pointermove', () => clearTimeout(pressTimer));
+
+    let pressTimer;
+    card.addEventListener('touchstart', e => {
+      pressTimer = setTimeout(async () => {
+        const item = state.backgroundItems.find(i => i.id === +card.dataset.id);
+        if (item) {
+          const m = await getModals();
+          m?.showContextMenu(e.touches[0], item);
+        }
+      }, 500);
+    }, { passive: true });
+    card.addEventListener('touchend',  () => clearTimeout(pressTimer));
+    card.addEventListener('touchmove', () => clearTimeout(pressTimer));
   });
 
-  // Favourite toggle
-  container.querySelectorAll('[data-fav]').forEach(btn => {
+  document.querySelectorAll('.card-fav').forEach(btn => {
     btn.addEventListener('click', async e => {
       e.stopPropagation();
-      const id   = +btn.dataset.fav;
-      const item = state.backgroundItems.find(i => i.id === id);
+      const item = state.backgroundItems.find(i => i.id === +btn.dataset.id);
       if (!item) return;
-      const updated = await saveItem({ ...item, isFavorited: !item.isFavorited });
-      upsertItemInState(updated);
+      item.isFavorited = !item.isFavorited;
+      upsertItemInState(await saveItem(item));
     });
   });
 }
 
-// ── Lazy loaders ──────────────────────────────────────────────
+function _attachLinkListeners() {
+  document.querySelectorAll('.link-btn[data-id]').forEach(btn => {
+    btn.addEventListener('contextmenu', async e => {
+      e.preventDefault();
+      const item = state.backgroundItems.find(i => i.id === +btn.dataset.id);
+      if (item) {
+        const m = await getModals();
+        m?.showContextMenu(e, item);
+      }
+    });
 
-async function _openItem(item) {
-  if (item.type === 'note') {
-    const { showNoteEditor } = await import('./note-editor.js');
-    showNoteEditor(item);
-  } else if (item.type === 'code') {
-    const { showCodeEditor } = await import('./code-editor.js');
-    showCodeEditor(item);
-  } else {
-    const { showLinkModal } = await import('./modals.js');
-    showLinkModal(item);
-  }
+    let pressTimer;
+    btn.addEventListener('touchstart', e => {
+      pressTimer = setTimeout(async () => {
+        e.preventDefault();
+        const item = state.backgroundItems.find(i => i.id === +btn.dataset.id);
+        if (item) {
+          const m = await getModals();
+          m?.showContextMenu(e.touches[0], item);
+        }
+      }, 500);
+    }, { passive: true });
+    btn.addEventListener('touchend',  () => clearTimeout(pressTimer));
+    btn.addEventListener('touchmove', () => clearTimeout(pressTimer));
+  });
 }
 
-async function _showCtx(id, x, y) {
-  const item = [...state.backgroundItems, ...state.stickyItems].find(i => i.id === id);
-  if (!item) return;
-  const { showContextMenu } = await import('./modals.js');
-  showContextMenu(item, x, y);
+async function _openEditor(item) {
+  if (item.type === 'note') {
+    const m = await import('./note-editor.js');
+    m.showNoteEditor(item);
+  } else if (item.type === 'code') {
+    const m = await import('./code-editor.js');
+    m.showCodeEditor(item);
+  } else {
+    const m = await getModals();
+    m?.showLinkModal(item);
+  }
 }

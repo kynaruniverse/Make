@@ -1,148 +1,158 @@
 /**
- * MAKÉ UI — stickies.js (V2)
- * Floating sticky notes on the sticky layer.
+ * MAKÉ UI — stickies.js
+ * Floating sticky-note layer.
  *
- * V2 fix: event listener cleanup — _dragCleanups and _resizeCleanups Maps
- * store cleanup functions that are called (via _cleanupSticky) BEFORE the
- * sticky DOM element is removed.  Without this, document-level mousemove /
- * touchmove listeners from makeDraggable / makeResizable accumulated forever.
+ * FIX: dragCleanups / resizeCleanups are now called when a sticky is deleted,
+ * preventing document-level event listener leaks.
  */
 
 import { state, upsertItemInState, removeItemFromState } from '../core/state.js';
 import { saveItem, deleteItem, updateItemPosition }       from '../core/storage.js';
 import { makeDraggable }  from '../utils/drag.js';
 import { makeResizable }  from '../utils/resize.js';
-import { esc, showToast } from '../utils/helpers.js';
+import { esc }            from '../utils/helpers.js';
 
-// Cleanup functions keyed by sticky id  (FIX: the V1 leak)
-const _dragCleanups   = new Map(); // id → () => void
-const _resizeCleanups = new Map(); // id → () => void
+const STICKY_COLORS      = ['#fff176','#a5d6a7','#90caf9','#f48fb1','#ce93d8','#ffcc80'];
+const STICKY_TAPE_COLORS = [
+  'rgba(255,255,255,0.55)', 'rgba(200,240,210,0.55)',
+  'rgba(180,220,255,0.55)', 'rgba(255,190,210,0.55)',
+  'rgba(220,180,255,0.55)', 'rgba(255,210,160,0.55)',
+];
 
-/** Call both cleanup fns for a sticky and remove their Map entries. */
-function _cleanupSticky(id) {
-  _dragCleanups.get(id)?.();
-  _dragCleanups.delete(id);
-  _resizeCleanups.get(id)?.();
-  _resizeCleanups.delete(id);
-}
+// FIX: cleanup maps now live in this module and are properly called on delete.
+const dragCleanups   = new Map();
+const resizeCleanups = new Map();
 
-// ── DOM builder ───────────────────────────────────────────────
-
-function _buildSticky(item) {
-  const el = document.createElement('div');
-  el.className = 'sticky-note';
-  el.dataset.id = item.id;
-  el.style.setProperty('--sticky-r',     `${item.rotation || 0}deg`);
-  el.style.setProperty('--sticky-color', item.color || '#fff176');
-
-  const { x = 20 + Math.random() * 60,
-          y = 70 + Math.random() * 50,
-          w = 188,
-          h = 168 } = item.position || {};
-
-  el.style.left   = `${x}px`;
-  el.style.top    = `${y}px`;
-  el.style.width  = `${w}px`;
-  el.style.height = `${h}px`;
-
-  el.innerHTML = `
-    <div class="sticky-tape"></div>
-    <div class="sticky-inner">
-      <div class="sticky-header">
-        <button class="sticky-delete" data-del="${item.id}" aria-label="Delete sticky">
-          <svg width="9" height="9" viewBox="0 0 24 24" fill="none"
-               stroke="currentColor" stroke-width="2.8" stroke-linecap="round">
-            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-          </svg>
-        </button>
-      </div>
-      <textarea class="sticky-textarea" placeholder="Write a note…"
-                spellcheck="false">${esc(item.text || '')}</textarea>
-    </div>
-    <div class="sticky-fold"></div>`;
-
-  return el;
-}
-
-// ── Render ────────────────────────────────────────────────────
+// ── Rendering ─────────────────────────────────────────────────
 
 export function renderStickies() {
   const layer = document.getElementById('sticky-layer');
   if (!layer) return;
 
-  const items = state.stickyItems;
+  const existing = new Map();
+  layer.querySelectorAll('.sticky-note[data-id]').forEach(el =>
+    existing.set(+el.dataset.id, el)
+  );
 
-  // Remove stickies no longer in state
-  [...layer.querySelectorAll('.sticky-note[data-id]')].forEach(el => {
-    const id = +el.dataset.id;
-    if (!items.find(i => i.id === id)) {
+  const ids = new Set(state.stickyItems.map(i => i.id));
+
+  // Remove stickies that are no longer in state.
+  existing.forEach((el, id) => {
+    if (!ids.has(id)) {
       _cleanupSticky(id);
       el.remove();
     }
   });
 
-  // Add newly appeared stickies (already-rendered ones are left untouched)
-  items.forEach(item => {
-    if (layer.querySelector(`[data-id="${item.id}"]`)) return;
-
-    const el = _buildSticky(item);
-    el.classList.add('sticky-dropped');
-    layer.appendChild(el);
-
-    // ── Drag ──────────────────────────────────────────────────
-    const dragCleanup = makeDraggable(
-      el,
-      null, // onDrag (real-time position) — not needed
-      null, // onStart
-      async (finalLeft, finalTop) => {
-        const pos = { ...(item.position || {}), x: finalLeft, y: finalTop };
-        await updateItemPosition(item.id, pos);
-        const s = state.stickyItems.find(i => i.id === item.id);
-        if (s) s.position = pos; // silent local update — no full re-render
-      }
-    );
-    _dragCleanups.set(item.id, dragCleanup);
-
-    // ── Resize ────────────────────────────────────────────────
-    const resizeCleanup = makeResizable(
-      el,
-      null, // onResize (real-time)
-      null, // onStart
-      async (finalW, finalH) => {
-        const pos = { ...(item.position || {}), w: finalW, h: finalH };
-        await updateItemPosition(item.id, pos);
-        const s = state.stickyItems.find(i => i.id === item.id);
-        if (s) s.position = pos;
-      }
-    );
-    _resizeCleanups.set(item.id, resizeCleanup);
-
-    // ── Textarea auto-save (debounced 600 ms) ─────────────────
-    const ta = el.querySelector('.sticky-textarea');
-    let saveTimer;
-    ta.addEventListener('input', () => {
-      clearTimeout(saveTimer);
-      saveTimer = setTimeout(async () => {
-        const s = state.stickyItems.find(i => i.id === item.id);
-        if (!s) return;
-        const updated = await saveItem({ ...s, text: ta.value });
-        // Upsert silently — don't trigger a full stickies re-render
-        const idx = state._data.stickyItems.findIndex(i => i.id === updated.id);
-        if (idx >= 0) state._data.stickyItems[idx] = updated;
-      }, 600);
-    });
-
-    // ── Delete ────────────────────────────────────────────────
-    el.querySelector('[data-del]').addEventListener('click', async e => {
-      e.stopPropagation();
-      el.classList.add('sticky-deleting');
-      setTimeout(async () => {
-        _cleanupSticky(item.id); // FIX: remove listeners BEFORE DOM removal
-        el.remove();
-        await deleteItem(item.id);
-        removeItemFromState(item.id);
-        showToast('Sticky deleted');
-      }, 210);
-    });
+  // Add or update stickies.
+  state.stickyItems.forEach(item => {
+    let el = existing.get(item.id);
+    if (!el) {
+      el = _makeStickyEl(item);
+      layer.appendChild(el);
+      _attachStickyBehaviour(el, item);
+      requestAnimationFrame(() => el.classList.add('sticky-dropped'));
+    } else {
+      // Update colour / rotation without rebuilding the whole element.
+      const colorIdx = STICKY_COLORS.indexOf(item.color);
+      el.style.setProperty('--sticky-color', item.color || STICKY_COLORS[0]);
+      el.style.setProperty('--sticky-tape',  STICKY_TAPE_COLORS[colorIdx >= 0 ? colorIdx : 0]);
+      el.style.setProperty('--sticky-r',     `${item.rotation || 0}deg`);
+      el.style.transform = `rotate(${item.rotation || 0}deg)`;
+    }
   });
 }
+
+// ── Element factory ───────────────────────────────────────────
+
+function _makeStickyEl(item) {
+  const x       = item.position?.x      || (50  + Math.random() * 120);
+  const y       = item.position?.y      || (30  + Math.random() * 100);
+  const w       = item.position?.width  || 175;
+  const h       = item.position?.height || 150;
+  const rot     = item.rotation || 0;
+  const col     = item.color || STICKY_COLORS[0];
+  const colorIdx = STICKY_COLORS.indexOf(col);
+  const tape    = STICKY_TAPE_COLORS[colorIdx >= 0 ? colorIdx : 0];
+
+  const el = document.createElement('div');
+  el.className  = 'sticky-note';
+  el.dataset.id = item.id;
+  el.style.cssText = `left:${x}px;top:${y}px;width:${w}px;height:${h}px;` +
+    `--sticky-color:${col};--sticky-tape:${tape};--sticky-r:${rot}deg;transform:rotate(${rot}deg);`;
+
+  el.innerHTML = `
+    <div class="sticky-tape"></div>
+    <div class="sticky-inner">
+      <div class="sticky-header">
+        <button class="sticky-delete" aria-label="Delete sticky">✕</button>
+      </div>
+      <textarea class="sticky-textarea" placeholder="Write something…">${esc(item.text || '')}</textarea>
+    </div>
+    <div class="sticky-fold"></div>
+  `;
+  return el;
+}
+
+// ── Behaviour wiring ──────────────────────────────────────────
+
+function _attachStickyBehaviour(el, item) {
+  const id = item.id;
+
+  // Delete button — FIX: call cleanup before removing from DOM.
+  el.querySelector('.sticky-delete').addEventListener('click', async e => {
+    e.stopPropagation();
+    el.classList.add('sticky-deleting');
+    setTimeout(async () => {
+      _cleanupSticky(id);          // ← FIX: remove document listeners
+      await deleteItem(id);
+      removeItemFromState(id);
+      el.remove();
+    }, 200);
+  });
+
+  // Auto-save textarea content.
+  const ta = el.querySelector('.sticky-textarea');
+  let debounce;
+  ta.addEventListener('input', () => {
+    clearTimeout(debounce);
+    debounce = setTimeout(async () => {
+      const found = state.stickyItems.find(i => i.id === id);
+      if (found) {
+        found.text = ta.value;
+        upsertItemInState(await saveItem(found));
+      }
+    }, 600);
+  });
+
+  // Drag.
+  dragCleanups.set(id, makeDraggable(el, null, null, async (left, top) => {
+    await updateItemPosition(id, {
+      x: left, y: top,
+      width:  parseFloat(el.style.width),
+      height: parseFloat(el.style.height),
+    });
+  }));
+
+  // Resize — FIX: makeResizable appends handle inside el, cleanup removes it.
+  resizeCleanups.set(`r${id}`, makeResizable(el, null, null, async (width, height) => {
+    await updateItemPosition(id, {
+      x:      parseFloat(el.style.left),
+      y:      parseFloat(el.style.top),
+      width, height,
+    });
+  }));
+}
+
+// ── Cleanup helper ────────────────────────────────────────────
+
+/** Remove all document-level listeners attached to a sticky, then clear maps. */
+function _cleanupSticky(id) {
+  const dragCleanup   = dragCleanups.get(id);
+  const resizeCleanup = resizeCleanups.get(`r${id}`);
+  if (dragCleanup)   { dragCleanup();   dragCleanups.delete(id); }
+  if (resizeCleanup) { resizeCleanup(); resizeCleanups.delete(`r${id}`); }
+}
+
+// ── Exports ───────────────────────────────────────────────────
+export { STICKY_COLORS, STICKY_TAPE_COLORS };
