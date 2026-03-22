@@ -36,8 +36,9 @@
 import { extendItem, nextCheckpoint } from './schema.js';
 
 const DB_NAME    = 'MakeDB';
-const STORE_NAME = 'items';
-const DB_VERSION = 2;
+const STORE_NAME    = 'items';
+const FOLDER_STORE  = 'folders';
+const DB_VERSION    = 3;   // bumped: adds folders store
 
 // ── Auto-backup config ────────────────────────────────────────
 // Trigger a backup file save after this many item saves.
@@ -63,6 +64,10 @@ const getDB = (() => {
             const store = db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
             store.createIndex('type',  'type');
             store.createIndex('layer', 'layer');
+          }
+          // V3: folders store
+          if (!db.objectStoreNames.contains(FOLDER_STORE)) {
+            db.createObjectStore(FOLDER_STORE, { keyPath: 'id', autoIncrement: true });
           }
         };
       });
@@ -415,4 +420,48 @@ function _showBackupIndicator() {
   el.classList.add('show');
   clearTimeout(el._hideTimer);
   el._hideTimer = setTimeout(() => el.classList.remove('show'), 2800);
+}
+
+// ── Folder CRUD ───────────────────────────────────────────────
+
+export async function getAllFolders() {
+  try {
+    const db = await getDB();
+    const tx = db.transaction(FOLDER_STORE, 'readonly');
+    return new Promise((resolve, reject) => {
+      const req = tx.objectStore(FOLDER_STORE).getAll();
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror   = () => reject(req.error);
+    });
+  } catch { return []; }
+}
+
+export async function saveFolder(folder) {
+  try {
+    const db    = await getDB();
+    const tx    = db.transaction(FOLDER_STORE, 'readwrite');
+    const store = tx.objectStore(FOLDER_STORE);
+    const toSave = { ...folder, updatedAt: Date.now() };
+    if (!toSave.createdAt) toSave.createdAt = Date.now();
+    return new Promise((resolve, reject) => {
+      const req = toSave.id ? store.put(toSave) : store.add((({ id: _, ...r }) => r)(toSave));
+      req.onsuccess = () => resolve({ ...toSave, id: req.result ?? toSave.id });
+      req.onerror   = () => reject(req.error);
+    });
+  } catch (err) {
+    console.warn('[Maké] saveFolder failed:', err);
+    return folder;
+  }
+}
+
+export async function deleteFolder(id) {
+  try {
+    const db = await getDB();
+    const tx = db.transaction(FOLDER_STORE, 'readwrite');
+    return new Promise((resolve, reject) => {
+      const req = tx.objectStore(FOLDER_STORE).delete(id);
+      req.onsuccess = () => resolve();
+      req.onerror   = () => reject(req.error);
+    });
+  } catch {}
 }

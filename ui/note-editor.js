@@ -190,7 +190,9 @@ export function showNoteEditor(existingItem = null) {
       } else {
         saved = await saveItem(createItem({
           layer: ItemLayer.BACKGROUND, type: ItemType.NOTE, title, content, tags,
+          folderId: window._makeActiveFolderForNext ?? null,
         }));
+        window._makeActiveFolderForNext = undefined;
       }
       upsertItemInState(saved);
       window._makeAutoBackup?.();

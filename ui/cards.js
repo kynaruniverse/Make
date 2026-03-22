@@ -89,6 +89,11 @@ export function getFilteredItems() {
     return true;
   });
 
+  // Folder filter: when activeFolder is set, only show items in that folder
+  if (state.activeFolder !== null) {
+    items = items.filter(i => i.folderId === state.activeFolder);
+  }
+
   if (state.filterFavourites) items = items.filter(i => i.isFavorited);
 
   const field = state.sortField;

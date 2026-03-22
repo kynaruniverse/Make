@@ -2094,3 +2094,575 @@ body{background:var(--sage);color:#fff;font-family:var(--font-body);font-size:14
 .code-editor-page .code-copy-btn {
   display: none !important;
 }
+
+/* ================================================================
+   V17 — SETTINGS REDESIGN · FOLDER SYSTEM
+   ================================================================ */
+
+/* ── Suppress old settings-page classes (replaced by sp-*) ── */
+.settings-page .settings-topbar,
+.settings-page .settings-body,
+.settings-page .settings-group,
+.settings-page .settings-group-label,
+.settings-page .settings-toggle-row,
+.settings-page .settings-toggle-left,
+.settings-page .settings-toggle-icon,
+.settings-page .settings-toggle-label,
+.settings-page .settings-toggle-desc,
+.settings-page .settings-segmented,
+.settings-page .settings-seg-btn,
+.settings-page .settings-storage-card,
+.settings-page .settings-explainer,
+.settings-page .settings-action,
+.settings-page .settings-version {
+  all: unset; /* new sp-* classes handle everything */
+  display: none;
+}
+
+/* ── SETTINGS PAGE SHELL ── */
+/* Inherits .settings-page from earlier (slide-up, z-index 800) */
+.settings-page {
+  display: flex;
+  flex-direction: column;
+  background: var(--sage-deeper);   /* matches app bg — feels native */
+  overflow: hidden;
+}
+[data-theme="dark"] .settings-page {
+  background: #1a1d1c;
+}
+
+/* ── TOP BAR ── */
+.sp-topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 18px 14px;
+  flex-shrink: 0;
+  /* No border — negative space separates it */
+}
+
+.sp-close {
+  width: 34px;
+  height: 34px;
+  background: rgba(255,255,255,0.10);
+  border: none;
+  border-radius: var(--r-md);
+  color: rgba(255,255,255,0.70);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background var(--dur-fast);
+}
+.sp-close:active  { background: rgba(255,255,255,0.18); }
+.sp-close svg {
+  stroke: currentColor; fill: none;
+  stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round;
+}
+.sp-close:focus-visible { outline: 2px solid var(--rose); outline-offset: 2px; }
+
+.sp-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: white;
+  letter-spacing: -0.3px;
+  flex: 1;
+}
+
+/* ── SCROLLABLE BODY ── */
+.sp-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 16px 52px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.sp-body::-webkit-scrollbar { display: none; }
+
+/* ── SECTION LABELS ── */
+.sp-section-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.38);
+  text-transform: uppercase;
+  letter-spacing: 0.9px;
+  padding: 20px 4px 8px;
+}
+.sp-section-label:first-child { padding-top: 4px; }
+
+/* ── CARD (groups rows) ── */
+.sp-card {
+  background: rgba(255,255,255,0.06);
+  border-radius: var(--r-xl);
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+[data-theme="dark"] .sp-card {
+  background: rgba(255,255,255,0.05);
+}
+
+/* ── ROW (inside card) ── */
+.sp-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 14px;
+  min-height: 52px;
+}
+
+.sp-row-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Icon circle */
+.sp-row-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.sp-row-icon svg {
+  stroke: white; fill: none;
+  stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
+}
+/* Coloured icon backgrounds */
+.sp-icon--moon    { background: #3b3660; }
+.sp-icon--grid    { background: #2a4a3e; }
+.sp-icon--ambient { background: #4a3520; }
+.sp-icon--fav     { background: #4a2030; }
+.sp-icon--sort    { background: #1e3a4a; }
+.sp-icon--export  { background: #1e4a2a; }
+.sp-icon--import  { background: #2a1e4a; }
+.sp-icon--help    { background: #3a2a1e; }
+
+.sp-row-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.90);
+  line-height: 1.2;
+}
+.sp-row-sub {
+  display: block;
+  font-size: 11px;
+  color: rgba(255,255,255,0.38);
+  margin-top: 2px;
+  line-height: 1.4;
+}
+
+/* ── DIVIDER inside card ── */
+.sp-divider {
+  height: 1px;
+  background: rgba(255,255,255,0.06);
+  margin: 0 14px;
+}
+
+/* ── SEGMENTED CONTROL ── */
+.sp-seg {
+  display: flex;
+  background: rgba(0,0,0,0.25);
+  border-radius: 10px;
+  padding: 2px;
+  gap: 2px;
+  flex-shrink: 0;
+}
+.sp-seg-btn {
+  padding: 5px 11px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: rgba(255,255,255,0.40);
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--font-body);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--dur-fast), color var(--dur-fast);
+}
+.sp-seg-btn.active {
+  background: rgba(182,141,147,0.28);
+  color: white;
+}
+.sp-seg-btn:focus-visible { outline: 2px solid var(--rose); outline-offset: 1px; }
+
+/* ── STORAGE SECTION ── */
+.sp-storage-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 13px 14px 10px;
+  flex-wrap: wrap;
+}
+.sp-storage-status {
+  font-size: 14px;
+  font-weight: 700;
+}
+.sp-storage-msg {
+  font-size: 12px;
+  color: rgba(255,255,255,0.38);
+  flex: 1;
+}
+.sp-storage-bar-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px 12px;
+}
+.sp-storage-bar {
+  flex: 1;
+  height: 4px;
+  background: rgba(255,255,255,0.10);
+  border-radius: var(--r-full);
+  overflow: hidden;
+}
+.sp-storage-bar-fill {
+  height: 100%;
+  background: var(--rose);
+  border-radius: var(--r-full);
+  transition: width 600ms var(--ease-out);
+}
+.sp-storage-bar-fill.warn { background: #e8a86a; }
+.sp-storage-usage {
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: rgba(255,255,255,0.32);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.sp-storage-warn {
+  font-size: 11px;
+  color: #e8a86a;
+  padding: 0 14px 10px;
+}
+
+/* ── ACTION ROWS (export/import/help) ── */
+.sp-action-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 13px 14px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  min-height: 52px;
+  transition: background var(--dur-fast);
+}
+.sp-action-row:active { background: rgba(255,255,255,0.05); }
+.sp-action-row:focus-visible { outline: 2px solid var(--rose); outline-offset: -2px; }
+
+.sp-action-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sp-chevron {
+  stroke: rgba(255,255,255,0.22);
+  fill: none;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
+}
+
+/* ── VERSION FOOTER ── */
+.sp-version {
+  text-align: center;
+  padding: 20px 0 8px;
+  font-size: 11px;
+  color: rgba(255,255,255,0.18);
+  font-family: var(--font-mono);
+}
+
+/* ================================================================
+   FOLDER STRIP — horizontal pill bar under search
+   ================================================================ */
+
+.folder-strip {
+  display: flex;
+  gap: 6px;
+  padding: 2px 0 12px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  flex-shrink: 0;
+}
+.folder-strip::-webkit-scrollbar { display: none; }
+/* Hide strip entirely when empty (no folders, just "All" + "New") */
+.folder-strip:empty { display: none; }
+
+.folder-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 13px;
+  border-radius: var(--r-full);
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.07);
+  color: rgba(255,255,255,0.55);
+  font-size: 12px;
+  font-weight: 500;
+  font-family: var(--font-body);
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background var(--dur-fast), color var(--dur-fast),
+              border-color var(--dur-fast), transform var(--dur-fast) var(--ease-spring);
+}
+.folder-pill svg {
+  stroke: currentColor; fill: none;
+  stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+  flex-shrink: 0;
+}
+.folder-pill:active    { transform: scale(0.93); }
+.folder-pill.active {
+  background: rgba(182,141,147,0.22);
+  border-color: rgba(182,141,147,0.45);
+  color: white;
+}
+.folder-pill:focus-visible { outline: 2px solid var(--rose); outline-offset: 2px; }
+
+/* Coloured dot for named folders */
+.folder-pill-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--fpill-color, var(--rose));
+  flex-shrink: 0;
+}
+
+/* New folder pill — dashed style */
+.folder-pill--new {
+  border-style: dashed;
+  border-color: rgba(255,255,255,0.18);
+  color: rgba(255,255,255,0.38);
+}
+.folder-pill--new:hover {
+  border-color: rgba(182,141,147,0.45);
+  color: var(--rose-light);
+  background: rgba(182,141,147,0.08);
+}
+
+/* ── Folder create/edit modal colours ── */
+.folder-color-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 2px 0;
+}
+.folder-color-swatch {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2.5px solid transparent;
+  cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease-spring), border-color var(--dur-fast);
+  flex-shrink: 0;
+}
+.folder-color-swatch:active  { transform: scale(0.86); }
+.folder-color-swatch.selected { border-color: white; transform: scale(1.14); }
+
+/* ================================================================
+   FOLDER VIEW PAGE — full-screen Pinterest masonry
+   ================================================================ */
+
+.folder-view-page {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-editor);
+  display: flex;
+  flex-direction: column;
+  background: var(--sage);
+  transform: translateX(100%);
+  transition: transform var(--dur-slow) var(--ease-spring);
+  overflow: hidden;
+}
+[data-theme="dark"] .folder-view-page { background: #1a1d1c; }
+.folder-view-page.open { transform: translateX(0); }
+
+/* Top bar */
+.folder-view-topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px 12px;
+  flex-shrink: 0;
+  background: rgba(0,0,0,0.12);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.folder-view-title {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 17px;
+  font-weight: 700;
+  color: white;
+  letter-spacing: -0.3px;
+}
+
+.folder-view-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 8px currentColor;
+}
+
+.folder-view-edit {
+  width: 34px;
+  height: 34px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: var(--r-md);
+  color: rgba(255,255,255,0.65);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background var(--dur-fast);
+}
+.folder-view-edit:active { background: rgba(255,255,255,0.16); }
+.folder-view-edit svg {
+  stroke: currentColor; fill: none;
+  stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
+}
+.folder-view-edit:focus-visible { outline: 2px solid var(--rose); outline-offset: 2px; }
+
+/* Scrollable content area */
+.folder-view-grid {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 12px 100px;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Pinterest masonry inside folder view */
+.fv-masonry {
+  columns: 2;
+  column-gap: 10px;
+}
+@media (min-width: 480px) { .fv-masonry { columns: 3; } }
+
+.fv-card {
+  break-inside: avoid;
+  display: block;
+  margin-bottom: 10px;
+  padding: 12px;
+  border-radius: var(--r-lg);
+  cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease-spring);
+}
+.fv-card:active   { transform: scale(0.96); }
+
+.fv-card-type {
+  font-size: 14px;
+  margin-bottom: 5px;
+  line-height: 1;
+}
+
+.fv-card-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.90);
+  margin-bottom: 5px;
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+.fv-card-preview {
+  font-size: 10px;
+  color: rgba(255,255,255,0.50);
+  font-family: var(--font-body);
+  line-height: 1.55;
+  display: -webkit-box;
+  -webkit-line-clamp: 6;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
+}
+.fv-card-preview.fv-mono { font-family: var(--font-mono); }
+
+/* Empty folder state */
+.fv-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 72px 24px;
+  text-align: center;
+  gap: 10px;
+}
+.fv-empty-icon {
+  font-size: 48px;
+  opacity: 0.6;
+  animation: float 4s ease-in-out infinite;
+}
+.fv-empty-title {
+  font-size: 17px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.55);
+}
+.fv-empty-hint {
+  font-size: 13px;
+  color: rgba(255,255,255,0.32);
+}
+.fv-empty-hint strong { color: rgba(255,255,255,0.50); }
+
+/* FAB inside folder view */
+.folder-view-fab {
+  position: absolute;
+  bottom: 28px;
+  right: 20px;
+  width: 52px;
+  height: 52px;
+  background: var(--rose);
+  border: none;
+  border-radius: var(--r-xl);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  box-shadow:
+    0 0 0 3px rgba(182,141,147,0.20),
+    0 0 20px rgba(182,141,147,0.55),
+    0 4px 16px rgba(0,0,0,0.35);
+  transition: transform 350ms var(--ease-spring), background var(--dur-fast);
+  z-index: 10;
+}
+.folder-view-fab:active {
+  transform: scale(0.88);
+  background: var(--rose-dark);
+}
+.folder-view-fab svg {
+  width: 24px; height: 24px;
+  stroke: white; fill: none;
+  stroke-width: 2.4; stroke-linecap: round;
+}
+
+/* ── Add-to-folder sheet: reuses .save-as-* ── */
+.add-to-folder-sheet {
+  background: var(--dark-modal);
+  border-radius: 24px 24px 0 0;
+  border: 1px solid rgba(255,255,255,0.09);
+  width: 100%;
+  max-width: 520px;
+  padding: 14px 20px 36px;
+  transform: translateY(100%);
+  transition: transform 320ms cubic-bezier(0.22,0.25,0,1);
+  box-shadow: 0 -8px 40px rgba(0,0,0,0.35);
+}
+.add-to-folder-sheet.open { transform: translateY(0); }

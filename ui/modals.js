@@ -132,7 +132,8 @@ export function showLinkModal(existingItem = null) {
           if (existingItem) {
             saved = await saveItem({ ...existingItem, url: normalised, title });
           } else {
-            saved = await saveItem(createItem({ layer: ItemLayer.BACKGROUND, type: ItemType.LINK, url: normalised, title }));
+            saved = await saveItem(createItem({ layer: ItemLayer.BACKGROUND, type: ItemType.LINK, url: normalised, title, folderId: window._makeActiveFolderForNext ?? null }));
+            window._makeActiveFolderForNext = undefined;
           }
           upsertItemInState(saved);
           window._makeAutoBackup?.();
@@ -205,141 +206,204 @@ export async function showSettingsModal() {
   const isDark       = localStorage.getItem('make_theme') === 'dark';
   const isGrid       = state.viewMode !== 'list';
   const isAmbient    = state.ambientEnabled;
+  const isFavs       = state.filterFavourites;
 
-  const storageIcon   = persistState === 'granted' ? '🔒' : persistState === 'denied' ? '⚠️' : 'ℹ️';
-  const storageTitle  = persistState === 'granted' ? 'Data protected'
-                      : persistState === 'denied'  ? 'Not fully protected' : 'Checking…';
-  const storageDetail = persistState === 'granted'
-    ? 'Safe from browser clear. Only uninstalling the app removes your data.'
-    : persistState === 'denied'
-      ? 'Install as a home screen app for full protection against browser clears.'
-      : 'Checking storage persistence status…';
-  const detailClass = persistState === 'granted' ? 'green' : persistState === 'denied' ? 'amber' : 'muted';
+  // Storage status
+  const storageOk     = persistState === 'granted';
+  const storageDenied = persistState === 'denied';
+  const storageStatus = storageOk ? 'Protected' : storageDenied ? 'Not protected' : 'Checking…';
+  const storageColor  = storageOk ? '#6dd4a4' : storageDenied ? '#e8a86a' : 'rgba(255,255,255,0.38)';
+  const storageMsg    = storageOk
+    ? 'Safe from browser clear'
+    : storageDenied
+      ? 'Install as home screen app for full protection'
+      : 'Checking…';
 
-  const usageWarning = estimate?.percent > 80
-    ? `<div class="settings-storage-note" style="color:#e8a86a;margin-top:4px">⚠️ Storage nearly full — export a backup soon.</div>` : '';
+  const usagePct  = Math.min(estimate?.percent || 0, 100);
+  const usageStr  = estimate ? `${estimate.usageStr} of ${estimate.quotaStr}` : '';
+  const nearFull  = (estimate?.percent || 0) > 80;
 
-  const usageBar = estimate ? `
-    <div class="settings-storage-divider"></div>
-    <div class="settings-usage-wrap">
-      <div class="settings-usage-row">
-        <div class="settings-usage-bar-bg">
-          <div class="settings-usage-bar-fill" style="width:${Math.min(estimate.percent,100)}%"></div>
-        </div>
-        <span class="settings-usage-label">${estimate.usageStr} / ${estimate.quotaStr}</span>
-      </div>
-      ${usageWarning}
-      <div class="settings-storage-note">Your data lives only on this device and is never sent anywhere.</div>
-    </div>` : '';
+  // Sort label helper
+  const sortMap   = { updatedAt: 'Modified', createdAt: 'Created', title: 'A–Z' };
+  const sortLabel = sortMap[state.sortField] || 'Modified';
+  const sortDirLabel = state.sortDir === 'asc' ? '↑' : '↓';
 
   const page = document.createElement('div');
-  page.id = 'settings-page';
+  page.id        = 'settings-page';
   page.className = 'settings-page';
   page.setAttribute('role', 'dialog');
   page.setAttribute('aria-modal', 'true');
   page.setAttribute('aria-label', 'Settings');
 
   page.innerHTML = `
-    <div class="settings-topbar">
-      <button class="settings-back-btn" id="settings-back" aria-label="Close settings">
-        <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    <!-- Top bar: just X and title -->
+    <div class="sp-topbar">
+      <button class="sp-close" id="settings-back" aria-label="Close">
+        <svg viewBox="0 0 24 24" width="18" height="18">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
       </button>
-      <span class="settings-topbar-title">Settings</span>
+      <span class="sp-title">Settings</span>
     </div>
-    <div class="settings-body">
-      <div class="settings-group">
-        <div class="settings-group-label">Appearance</div>
-        <div class="settings-toggle-row">
-          <div class="settings-toggle-left">
-            <span class="settings-toggle-icon" id="sp-theme-icon">${isDark ? '🌙' : '☀️'}</span>
-            <div><div class="settings-toggle-label">Dark mode</div><div class="settings-toggle-desc">Switch between light and dark theme</div></div>
+
+    <div class="sp-body">
+
+      <!-- ── APPEARANCE ── -->
+      <div class="sp-section-label">Appearance</div>
+
+      <div class="sp-card">
+        <!-- Dark mode row -->
+        <div class="sp-row">
+          <div class="sp-row-left">
+            <div class="sp-row-icon sp-icon--moon" id="sp-theme-icon">
+              <svg viewBox="0 0 24 24" width="16" height="16"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+            </div>
+            <span class="sp-row-label">Dark mode</span>
           </div>
-          <button class="mini-toggle ${isDark ? 'on' : ''}" id="sp-theme-toggle" aria-label="Dark mode" aria-pressed="${isDark}">
+          <button class="mini-toggle ${isDark ? 'on' : ''}" id="sp-theme-toggle"
+                  aria-label="Dark mode" aria-pressed="${isDark}">
             <div class="mini-toggle-knob"></div>
           </button>
         </div>
-        <div class="settings-toggle-row">
-          <div class="settings-toggle-left">
-            <span class="settings-toggle-icon">🗂️</span>
-            <div><div class="settings-toggle-label">Card view</div><div class="settings-toggle-desc">Choose how notes are displayed</div></div>
+
+        <div class="sp-divider"></div>
+
+        <!-- View mode -->
+        <div class="sp-row">
+          <div class="sp-row-left">
+            <div class="sp-row-icon sp-icon--grid">
+              <svg viewBox="0 0 24 24" width="16" height="16"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+            </div>
+            <span class="sp-row-label">Card view</span>
           </div>
-          <div class="settings-segmented" role="group" aria-label="View mode">
-            <button class="settings-seg-btn ${isGrid ? 'active' : ''}" id="sp-view-grid" aria-pressed="${isGrid}">
-              <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Grid
-            </button>
-            <button class="settings-seg-btn ${!isGrid ? 'active' : ''}" id="sp-view-list" aria-pressed="${!isGrid}">
-              <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>List
-            </button>
+          <div class="sp-seg" role="group" aria-label="View mode">
+            <button class="sp-seg-btn ${isGrid ? 'active' : ''}" id="sp-view-grid" aria-pressed="${isGrid}">Grid</button>
+            <button class="sp-seg-btn ${!isGrid ? 'active' : ''}" id="sp-view-list" aria-pressed="${!isGrid}">List</button>
           </div>
         </div>
       </div>
-      <div class="settings-group">
-        <div class="settings-group-label">Organisation</div>
-        <div class="settings-toggle-row">
-          <div class="settings-toggle-left">
-            <span class="settings-toggle-icon">🌙</span>
-            <div><div class="settings-toggle-label">Ambient sorting</div><div class="settings-toggle-desc">Morning = notes · Afternoon = links · Evening = code</div></div>
+
+      <!-- ── ORGANISE (was drawer) ── -->
+      <div class="sp-section-label">Organise</div>
+
+      <div class="sp-card">
+        <!-- Ambient sorting -->
+        <div class="sp-row">
+          <div class="sp-row-left">
+            <div class="sp-row-icon sp-icon--ambient">
+              <svg viewBox="0 0 24 24" width="16" height="16"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+            </div>
+            <div>
+              <span class="sp-row-label">Ambient sorting</span>
+              <span class="sp-row-sub">Morning: notes · Afternoon: links · Evening: code</span>
+            </div>
           </div>
-          <button class="mini-toggle ${isAmbient ? 'on' : ''}" id="sp-ambient-toggle" aria-label="Ambient sorting" aria-pressed="${isAmbient}">
+          <button class="mini-toggle ${isAmbient ? 'on' : ''}" id="sp-ambient-toggle"
+                  aria-label="Ambient sorting" aria-pressed="${isAmbient}">
             <div class="mini-toggle-knob"></div>
           </button>
         </div>
-      </div>
-      <div class="settings-group">
-        <div class="settings-group-label">How your data is saved</div>
-        <div class="settings-explainer">
-          <div class="settings-explainer-row">
-            <span class="settings-explainer-icon">💾</span>
-            <div class="settings-explainer-text">
-              <div class="settings-explainer-title">Saves automatically inside the app</div>
-              <div class="settings-explainer-body">Every note, link, snippet and sticky saves the moment you tap Save. Close the app, reopen it — everything is there.</div>
+
+        <div class="sp-divider"></div>
+
+        <!-- Favourites filter -->
+        <div class="sp-row">
+          <div class="sp-row-left">
+            <div class="sp-row-icon sp-icon--fav">
+              <svg viewBox="0 0 24 24" width="16" height="16"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
             </div>
+            <span class="sp-row-label">Favourites only</span>
           </div>
-          <div class="settings-explainer-divider"></div>
-          <div class="settings-explainer-row">
-            <span class="settings-explainer-icon">🗂️</span>
-            <div class="settings-explainer-text">
-              <div class="settings-explainer-title">Backup file is extra insurance</div>
-              <div class="settings-explainer-body">The export file is a safety net — not the main save. Your notes are already safe inside the app.</div>
+          <button class="mini-toggle ${isFavs ? 'on' : ''}" id="sp-fav-toggle"
+                  aria-label="Favourites only" aria-pressed="${isFavs}">
+            <div class="mini-toggle-knob"></div>
+          </button>
+        </div>
+
+        <div class="sp-divider"></div>
+
+        <!-- Sort order -->
+        <div class="sp-row">
+          <div class="sp-row-left">
+            <div class="sp-row-icon sp-icon--sort">
+              <svg viewBox="0 0 24 24" width="16" height="16"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="9" y2="18"/></svg>
             </div>
+            <span class="sp-row-label">Sort by</span>
+          </div>
+          <div class="sp-seg" role="group" aria-label="Sort">
+            <button class="sp-seg-btn ${state.sortField==='updatedAt'?'active':''}" data-sort="updatedAt" id="sp-sort-mod">Modified</button>
+            <button class="sp-seg-btn ${state.sortField==='createdAt'?'active':''}" data-sort="createdAt" id="sp-sort-cre">Created</button>
+            <button class="sp-seg-btn ${state.sortField==='title'?'active':''}" data-sort="title" id="sp-sort-ttl">A–Z</button>
           </div>
         </div>
       </div>
-      <div class="settings-group">
-        <div class="settings-group-label">Storage status</div>
-        <div class="settings-storage-card">
-          <div class="settings-storage-status">
-            <span class="settings-storage-icon">${storageIcon}</span>
-            <div class="settings-storage-text">
-              <div class="settings-storage-title">${storageTitle}</div>
-              <div class="settings-storage-detail ${detailClass}">${storageDetail}</div>
-            </div>
-          </div>
-          ${usageBar}
+
+      <!-- ── STORAGE ── -->
+      <div class="sp-section-label">Storage</div>
+
+      <div class="sp-card">
+        <div class="sp-storage-row">
+          <span class="sp-storage-status" style="color:${storageColor}">${storageStatus}</span>
+          <span class="sp-storage-msg">${storageMsg}</span>
         </div>
+        ${estimate ? `
+        <div class="sp-divider"></div>
+        <div class="sp-storage-bar-wrap">
+          <div class="sp-storage-bar">
+            <div class="sp-storage-bar-fill ${nearFull ? 'warn' : ''}" style="width:${usagePct}%"></div>
+          </div>
+          <span class="sp-storage-usage">${usageStr}</span>
+        </div>
+        ${nearFull ? `<div class="sp-storage-warn">Storage nearly full — export a backup soon</div>` : ''}` : ''}
       </div>
-      <div class="settings-group">
-        <div class="settings-group-label">Backup &amp; restore</div>
-        <button class="settings-action" id="sp-export">
-          <span class="settings-action-icon">📤</span>
-          <div class="settings-action-text"><div class="settings-action-title">Export backup</div><div class="settings-action-desc">Save all your data as a file you keep</div></div>
-          <span class="settings-action-chevron">›</span>
+
+      <!-- ── DATA ── -->
+      <div class="sp-section-label">Data</div>
+
+      <div class="sp-card">
+        <button class="sp-action-row" id="sp-export">
+          <div class="sp-row-icon sp-icon--export">
+            <svg viewBox="0 0 24 24" width="16" height="16"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          </div>
+          <div class="sp-action-text">
+            <span class="sp-row-label">Export backup</span>
+            <span class="sp-row-sub">Save all data to a file</span>
+          </div>
+          <svg class="sp-chevron" viewBox="0 0 24 24" width="14" height="14"><polyline points="9 18 15 12 9 6"/></svg>
         </button>
-        <button class="settings-action" id="sp-import">
-          <span class="settings-action-icon">📥</span>
-          <div class="settings-action-text"><div class="settings-action-title">Restore from backup</div><div class="settings-action-desc">Import a previously exported file</div></div>
-          <span class="settings-action-chevron">›</span>
+
+        <div class="sp-divider"></div>
+
+        <button class="sp-action-row" id="sp-import">
+          <div class="sp-row-icon sp-icon--import">
+            <svg viewBox="0 0 24 24" width="16" height="16"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          </div>
+          <div class="sp-action-text">
+            <span class="sp-row-label">Restore from backup</span>
+            <span class="sp-row-sub">Import a previously exported file</span>
+          </div>
+          <svg class="sp-chevron" viewBox="0 0 24 24" width="14" height="14"><polyline points="9 18 15 12 9 6"/></svg>
         </button>
       </div>
-      <div class="settings-group">
-        <div class="settings-group-label">Help</div>
-        <button class="settings-action" id="sp-onboarding">
-          <span class="settings-action-icon">👋</span>
-          <div class="settings-action-text"><div class="settings-action-title">Show welcome screen again</div><div class="settings-action-desc">Revisit the privacy explanation and backup setup</div></div>
-          <span class="settings-action-chevron">›</span>
+
+      <!-- ── HELP ── -->
+      <div class="sp-section-label">Help</div>
+
+      <div class="sp-card">
+        <button class="sp-action-row" id="sp-onboarding">
+          <div class="sp-row-icon sp-icon--help">
+            <svg viewBox="0 0 24 24" width="16" height="16"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          </div>
+          <div class="sp-action-text">
+            <span class="sp-row-label">Show welcome screen</span>
+            <span class="sp-row-sub">Privacy guide and backup setup</span>
+          </div>
+          <svg class="sp-chevron" viewBox="0 0 24 24" width="14" height="14"><polyline points="9 18 15 12 9 6"/></svg>
         </button>
       </div>
-      <div class="settings-version">Maké · V15 · All data stored locally on this device</div>
+
+      <div class="sp-version">Maké · V17 · All data stored locally</div>
     </div>
   `;
 
@@ -348,7 +412,6 @@ export async function showSettingsModal() {
   setTimeout(() => page.querySelector('#settings-back')?.focus(), 440);
 
   const removeTrap = _focusTrap(page);
-
   const close = () => {
     removeTrap();
     page.classList.remove('open');
@@ -356,29 +419,35 @@ export async function showSettingsModal() {
   };
 
   page.querySelector('#settings-back').addEventListener('click', close);
+  const onKey = e => { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onKey); } };
+  document.addEventListener('keydown', onKey);
 
+  // Dark mode
   page.querySelector('#sp-theme-toggle').addEventListener('click', e => {
     const btn = e.currentTarget;
     const nowDark = btn.classList.toggle('on');
     btn.setAttribute('aria-pressed', nowDark);
-    page.querySelector('#sp-theme-icon').textContent = nowDark ? '🌙' : '☀️';
     localStorage.setItem('make_theme', nowDark ? 'dark' : 'light');
     nowDark ? document.documentElement.setAttribute('data-theme','dark')
             : document.documentElement.removeAttribute('data-theme');
     document.getElementById('theme-toggle')?.classList.toggle('on', nowDark);
   });
 
-  page.querySelector('#sp-view-grid').addEventListener('click', () => {
+  // View mode
+  const gridBtn = page.querySelector('#sp-view-grid');
+  const listBtn = page.querySelector('#sp-view-list');
+  gridBtn.addEventListener('click', () => {
     state.viewMode = 'grid';
-    page.querySelector('#sp-view-grid').classList.add('active');    page.querySelector('#sp-view-grid').setAttribute('aria-pressed','true');
-    page.querySelector('#sp-view-list').classList.remove('active'); page.querySelector('#sp-view-list').setAttribute('aria-pressed','false');
+    gridBtn.classList.add('active');    gridBtn.setAttribute('aria-pressed','true');
+    listBtn.classList.remove('active'); listBtn.setAttribute('aria-pressed','false');
   });
-  page.querySelector('#sp-view-list').addEventListener('click', () => {
+  listBtn.addEventListener('click', () => {
     state.viewMode = 'list';
-    page.querySelector('#sp-view-list').classList.add('active');    page.querySelector('#sp-view-list').setAttribute('aria-pressed','true');
-    page.querySelector('#sp-view-grid').classList.remove('active'); page.querySelector('#sp-view-grid').setAttribute('aria-pressed','false');
+    listBtn.classList.add('active');    listBtn.setAttribute('aria-pressed','true');
+    gridBtn.classList.remove('active'); gridBtn.setAttribute('aria-pressed','false');
   });
 
+  // Ambient
   page.querySelector('#sp-ambient-toggle').addEventListener('click', async e => {
     const btn = e.currentTarget;
     state.ambientEnabled = !state.ambientEnabled;
@@ -386,9 +455,34 @@ export async function showSettingsModal() {
     btn.setAttribute('aria-pressed', state.ambientEnabled);
     const { startAmbient, stopAmbient } = await import('../features/ambient.js');
     state.ambientEnabled ? startAmbient() : stopAmbient();
-    document.getElementById('ambient-mini-toggle')?.classList.toggle('on', state.ambientEnabled);
   });
 
+  // Favourites
+  page.querySelector('#sp-fav-toggle').addEventListener('click', e => {
+    const btn = e.currentTarget;
+    state.filterFavourites = !state.filterFavourites;
+    btn.classList.toggle('on', state.filterFavourites);
+    btn.setAttribute('aria-pressed', state.filterFavourites);
+  });
+
+  // Sort
+  page.querySelectorAll('[data-sort]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const field = btn.dataset.sort;
+      if (field === state.sortField) {
+        state.sortDir = state.sortDir === 'desc' ? 'asc' : 'desc';
+      } else {
+        state.sortField = field;
+        state.sortDir   = 'desc';
+      }
+      page.querySelectorAll('[data-sort]').forEach(b => {
+        b.classList.toggle('active', b.dataset.sort === state.sortField);
+        b.setAttribute('aria-pressed', b.dataset.sort === state.sortField);
+      });
+    });
+  });
+
+  // Data actions
   page.querySelector('#sp-export').addEventListener('click', () => { close(); setTimeout(() => exportData(), 420); });
   page.querySelector('#sp-import').addEventListener('click', () => { close(); setTimeout(() => importData(), 420); });
   page.querySelector('#sp-onboarding').addEventListener('click', async () => {
@@ -398,10 +492,8 @@ export async function showSettingsModal() {
       resetOnboarding(); showOnboarding();
     }, 420);
   });
-
-  const onKey = e => { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onKey); } };
-  document.addEventListener('keydown', onKey);
 }
+
 
 // ── Context menu ──────────────────────────────────────────────
 
@@ -425,6 +517,7 @@ export function showContextMenu(evt, item) {
     { label: '⎘ Duplicate',  action: 'duplicate' },
     { label: '✎ Edit',       action: 'edit'      },
     { label: '↗ Save as…',   action: 'saveas'    },
+    { label: '📁 Move to folder', action: 'movefolder' },
     { divider: true },
     { label: '🗑 Delete', action: 'delete', destructive: true },
   ];
@@ -515,11 +608,78 @@ export function showContextMenu(evt, item) {
       } else if (action === 'saveas') {
         const { showSaveAsSheet } = await import('../features/save-as.js');
         showSaveAsSheet(item);
+      } else if (action === 'movefolder') {
+        _showMoveToFolder(item);
       } else if (action === 'delete') {
         await deleteItem(item.id);
         removeItemFromState(item.id);
         showToast('Deleted');
       }
+    });
+  });
+}
+
+// ── Move to folder ────────────────────────────────────────────
+
+function _showMoveToFolder(item) {
+  // Dynamic import to avoid circular at module level
+  import('../core/state.js').then(({ state, upsertItemInState }) => {
+    import('../core/storage.js').then(({ saveItem }) => {
+      const folders = state.folders;
+      if (!folders.length) {
+        showToast('No folders yet — create one from the folder strip');
+        return;
+      }
+
+      document.getElementById('move-folder-overlay')?.remove();
+      const overlay = document.createElement('div');
+      overlay.id = 'move-folder-overlay';
+      overlay.className = 'save-as-overlay';
+
+      const sheet = document.createElement('div');
+      sheet.className = 'save-as-sheet';
+      sheet.innerHTML = `
+        <div class="save-as-handle"></div>
+        <div class="save-as-title">Move to folder</div>
+        <div class="save-as-options">
+          <button class="save-as-option" data-fid="null">
+            <span class="save-as-option-icon">📋</span>
+            <div class="save-as-option-text">
+              <div class="save-as-option-label">No folder</div>
+              <div class="save-as-option-desc">Move back to top level</div>
+            </div>
+          </button>
+          ${folders.map(f => `
+            <button class="save-as-option" data-fid="${f.id}">
+              <span class="save-as-option-icon" style="display:inline-block;width:18px;height:18px;border-radius:50%;background:${f.color || '#b68d93'};margin-top:3px;"></span>
+              <div class="save-as-option-text">
+                <div class="save-as-option-label">${esc(f.name)}</div>
+              </div>
+            </button>`).join('')}
+        </div>
+        <button class="save-as-cancel">Cancel</button>
+      `;
+
+      overlay.appendChild(sheet);
+      document.body.appendChild(overlay);
+      requestAnimationFrame(() => { overlay.classList.add('open'); sheet.classList.add('open'); });
+
+      const close = () => {
+        overlay.classList.remove('open'); sheet.classList.remove('open');
+        setTimeout(() => overlay.remove(), 320);
+      };
+      overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+      sheet.querySelector('.save-as-cancel').addEventListener('click', close);
+
+      sheet.querySelectorAll('[data-fid]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const fid = btn.dataset.fid === 'null' ? null : +btn.dataset.fid;
+          const updated = await saveItem({ ...item, folderId: fid });
+          upsertItemInState(updated);
+          close();
+          showToast(fid ? 'Moved to folder' : 'Removed from folder');
+        });
+      });
     });
   });
 }

@@ -32,6 +32,7 @@ export const ItemSchema = {
   position:    null,
   isFavorited: false,
   tags:        [],
+  folderId:    null,   // null = no folder (top-level)
   checkpoint:  0,
   createdAt:   0,
   updatedAt:   0,
@@ -58,6 +59,7 @@ export function extendItem(item) {
     checkpoint:  0,
     language:    'javascript',
     rotation:    0,
+    folderId:    null,
     ...item,
   };
 }

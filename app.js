@@ -18,10 +18,10 @@ import { renderStickies }                from './ui/stickies.js';
 import { showNoteEditor }                from './ui/note-editor.js';
 import { showCodeEditor }                from './ui/code-editor.js';
 import { showLinkModal, showStickyModal, showSettingsModal } from './ui/modals.js';
-import { showDrawer }                    from './features/drawer.js';
 import { initAmbient }                   from './features/ambient.js';
 import { showToast }                     from './utils/helpers.js';
 import { hasOnboarded, showOnboarding }  from './features/onboarding.js';
+import { renderFolderStrip }             from './features/folders.js';
 
 const app = document.getElementById('app');
 
@@ -81,6 +81,7 @@ async function init() {
     _syncAmbientToggle();
     _syncNavTabs();
     _syncItemCount();
+    renderFolderStrip();
   });
 
   initAmbient();
@@ -165,18 +166,11 @@ function _buildShell() {
                   aria-label="Toggle theme" aria-pressed="${isDark}">
             <div class="toggle-knob"></div>
           </button>
-          <button class="hdr-icon-btn" id="burger-btn" aria-label="Open menu">
-            <svg viewBox="0 0 24 24">
-              <line x1="3" y1="7"  x2="21" y2="7"/>
-              <line x1="3" y1="12" x2="21" y2="12"/>
-              <line x1="8" y1="17" x2="21" y2="17"/>
-            </svg>
-          </button>
         </div>
       </div>
 
-      <!-- Collapsible search bar -->
-      <div class="header-search-row" id="header-search-row">
+      <!-- Search bar -->
+      <div class="header-search-row">
         <button class="search-pill" id="canvas-search-btn" aria-label="Search (⌘K)">
           <svg viewBox="0 0 24 24" width="14" height="14">
             <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
@@ -186,6 +180,9 @@ function _buildShell() {
         </button>
         <span class="canvas-item-count" id="canvas-item-count"></span>
       </div>
+
+      <!-- Folder strip -->
+      <div class="folder-strip" id="folder-strip" role="group" aria-label="Folders"></div>
     </div>
 
     <div class="canvas">
@@ -232,8 +229,10 @@ function _buildShell() {
       <button class="nav-btn ${state.currentTab === 'notes' ? 'active' : ''}"
               data-tab="notes" aria-label="Notes" title="Notes (⌘N)"
               aria-current="${state.currentTab === 'notes' ? 'page' : 'false'}">
-        <svg viewBox="0 0 24 24">
-          <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 20h9"/>
+          <path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/>
+        </svg>
         <span class="nav-btn-label">Notes</span>
       </button>
       <button class="nav-btn-fab" id="fab" aria-label="Add new item" aria-haspopup="menu">
@@ -311,8 +310,10 @@ function _attachShellListeners() {
   });
 
   document.getElementById('theme-toggle').addEventListener('click', _toggleTheme);
-  document.getElementById('burger-btn').addEventListener('click', showDrawer);
   document.getElementById('settings-btn').addEventListener('click', showSettingsModal);
+
+  // Init folder strip after shell is built
+  renderFolderStrip();
 
   // Canvas search — instant, no drawer required
   document.getElementById('canvas-search-btn').addEventListener('click', async () => {

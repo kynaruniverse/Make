@@ -8,7 +8,7 @@
  *     resets the favourites filter.
  */
 
-import { getAllItems } from './storage.js';
+import { getAllItems, getAllFolders } from './storage.js';
 
 const PREFS_KEY = 'make_prefs';
 
@@ -28,6 +28,8 @@ export const state = {
   _data: {
     backgroundItems:  [],
     stickyItems:      [],
+    folders:          [],          // [{id, name, color, createdAt}]
+    activeFolder:     null,        // null = show all (no folder filter)
     currentTab:       prefs.currentTab       || 'notes',
     showAddMenu:      false,
     ambientEnabled:   prefs.ambientEnabled   ?? false,
@@ -45,6 +47,12 @@ export const state = {
 
   get stickyItems()  { return this._data.stickyItems; },
   set stickyItems(v) { this._data.stickyItems = v; this._notify(); },
+
+  get folders()  { return this._data.folders; },
+  set folders(v) { this._data.folders = v; this._notify(); },
+
+  get activeFolder()  { return this._data.activeFolder; },
+  set activeFolder(v) { this._data.activeFolder = v; this._notify(); },
 
   get currentTab()  { return this._data.currentTab; },
   set currentTab(v) { this._data.currentTab = v; savePrefs({ currentTab: v }); this._notify(); },
@@ -74,14 +82,16 @@ export const state = {
 /** Load all items from IndexedDB, split by layer. */
 export async function loadInitialData() {
   try {
-    const all = await getAllItems();
+    const [all, folders] = await Promise.all([getAllItems(), getAllFolders()]);
     state._data.backgroundItems = all.filter(i => i.layer === 'background');
     state._data.stickyItems     = all.filter(i => i.layer === 'sticky');
+    state._data.folders         = folders;
     state._notify();
   } catch (err) {
     console.error('[Maké] Failed to load data:', err);
     state._data.backgroundItems = [];
     state._data.stickyItems     = [];
+    state._data.folders         = [];
     state._notify();
   }
 }

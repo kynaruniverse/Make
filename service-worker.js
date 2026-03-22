@@ -35,6 +35,7 @@ const PRECACHE = [
   './features/sort-menu.js',
   './features/onboarding.js',
   './features/save-as.js',
+  './features/folders.js',
 ];
 
 self.addEventListener('install', e => {

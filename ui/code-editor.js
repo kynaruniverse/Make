@@ -409,7 +409,9 @@ export function showCodeEditor(existingItem = null) {
       } else {
         saved = await saveItem(createItem({
           layer: ItemLayer.BACKGROUND, type: ItemType.CODE, title, code, language: selectedLang,
+          folderId: window._makeActiveFolderForNext ?? null,
         }));
+        window._makeActiveFolderForNext = undefined;
       }
       upsertItemInState(saved);
       window._makeAutoBackup?.();
