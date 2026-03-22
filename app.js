@@ -145,53 +145,52 @@ function _buildShell() {
   const isDark = _getTheme() === 'dark';
 
   app.innerHTML = `
+    <!-- ══ REDESIGNED HEADER (V16) ══
+         Left: elegant pill date — no heavy box
+         Centre: Maké branding breathes freely
+         Right: theme toggle + menu icon (compact)  -->
     <div class="app-header">
       <div class="header-row">
 
-        <!-- LEFT: date widget (V10 — was burger) -->
-        <div class="date-widget" id="date-widget" aria-label="Today's date">
-          <div class="date-widget-date">${date}</div>
-          <div class="date-widget-day">${day}</div>
+        <div class="date-pill" id="date-widget" aria-label="Today's date">
+          <span class="date-pill-day">${day}</span>
+          <span class="date-pill-sep">·</span>
+          <span class="date-pill-date">${date}</span>
         </div>
 
-        <!-- RIGHT: title + theme toggle -->
-        <div class="header-right">
-          <div class="header-title-block">
-            <h1 class="app-title">Maké</h1>
-            <p class="app-subtitle">command center</p>
-          </div>
+        <h1 class="app-title">Maké</h1>
+
+        <div class="header-actions">
           <button class="toggle-track ${isDark ? 'on' : ''}" id="theme-toggle"
                   aria-label="Toggle theme" aria-pressed="${isDark}">
             <div class="toggle-knob"></div>
           </button>
+          <button class="hdr-icon-btn" id="burger-btn" aria-label="Open menu">
+            <svg viewBox="0 0 24 24">
+              <line x1="3" y1="7"  x2="21" y2="7"/>
+              <line x1="3" y1="12" x2="21" y2="12"/>
+              <line x1="8" y1="17" x2="21" y2="17"/>
+            </svg>
+          </button>
         </div>
+      </div>
 
+      <!-- Collapsible search bar -->
+      <div class="header-search-row" id="header-search-row">
+        <button class="search-pill" id="canvas-search-btn" aria-label="Search (⌘K)">
+          <svg viewBox="0 0 24 24" width="14" height="14">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <span>Search notes, code, links…</span>
+          <kbd class="search-kbd">⌘K</kbd>
+        </button>
+        <span class="canvas-item-count" id="canvas-item-count"></span>
       </div>
     </div>
 
     <div class="canvas">
       <div class="grid-layer" id="grid-layer">
-
-        <!-- CANVAS TOOLBAR: burger now lives here, just above cards (V10) -->
-        <div class="canvas-toolbar" id="canvas-toolbar">
-          <button class="canvas-toolbar-btn" id="burger-btn" aria-label="Open menu">
-            <svg viewBox="0 0 24 24">
-              <line x1="3" y1="6"  x2="21" y2="6"/>
-              <line x1="3" y1="12" x2="21" y2="12"/>
-              <line x1="3" y1="18" x2="21" y2="18"/>
-            </svg>
-          </button>
-          <span class="canvas-item-count" id="canvas-item-count"></span>
-          <button class="canvas-toolbar-btn canvas-search-btn" id="canvas-search-btn"
-                  aria-label="Search (⌘K)" title="Search (⌘K)">
-            <svg viewBox="0 0 24 24">
-              <circle cx="11" cy="11" r="8"/>
-              <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-            </svg>
-          </button>
-        </div>
-
-        <div class="grid" id="grid-container"></div>
+        <div class="masonry-grid" id="grid-container"></div>
       </div>
       <div class="sticky-layer" id="sticky-layer"></div>
     </div>
@@ -220,6 +219,7 @@ function _buildShell() {
       </button>
     </div>
 
+    <!-- ══ DOCK-STYLE BOTTOM NAV (V16) ══ -->
     <nav class="bottom-nav" role="navigation" aria-label="Main navigation">
       <button class="nav-btn ${state.currentTab === 'links' ? 'active' : ''}"
               data-tab="links" aria-label="Links" title="Links"
@@ -227,12 +227,14 @@ function _buildShell() {
         <svg viewBox="0 0 24 24">
           <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/>
           <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+        <span class="nav-btn-label">Links</span>
       </button>
       <button class="nav-btn ${state.currentTab === 'notes' ? 'active' : ''}"
               data-tab="notes" aria-label="Notes" title="Notes (⌘N)"
               aria-current="${state.currentTab === 'notes' ? 'page' : 'false'}">
         <svg viewBox="0 0 24 24">
           <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+        <span class="nav-btn-label">Notes</span>
       </button>
       <button class="nav-btn-fab" id="fab" aria-label="Add new item" aria-haspopup="menu">
         <svg viewBox="0 0 24 24">
@@ -244,11 +246,13 @@ function _buildShell() {
               aria-current="${state.currentTab === 'code' ? 'page' : 'false'}">
         <svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/>
           <polyline points="8 6 2 12 8 18"/></svg>
+        <span class="nav-btn-label">Code</span>
       </button>
       <button class="nav-btn" id="settings-btn" aria-label="Settings" title="Settings">
         <svg viewBox="0 0 24 24">
           <circle cx="12" cy="12" r="3"/>
           <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        <span class="nav-btn-label">Settings</span>
       </button>
     </nav>
   `;
@@ -316,13 +320,15 @@ function _attachShellListeners() {
     showSearch();
   });
 
-  // Live date tick
+  // Live date tick — updates pill elements
   setInterval(() => {
     const { day, date } = _getLiveDate();
     const dw = document.getElementById('date-widget');
     if (dw) {
-      dw.querySelector('.date-widget-date').textContent = date;
-      dw.querySelector('.date-widget-day').textContent  = day;
+      const dayEl  = dw.querySelector('.date-pill-day');
+      const dateEl = dw.querySelector('.date-pill-date');
+      if (dayEl)  dayEl.textContent  = day;
+      if (dateEl) dateEl.textContent = date;
     }
   }, 60_000);
 }

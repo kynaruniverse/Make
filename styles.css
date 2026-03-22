@@ -63,14 +63,14 @@ body{background:var(--sage);color:#fff;font-family:var(--font-body);font-size:14
 /* Date widget now on left; title block + toggle on right. Tighter padding. */
 .app-header{display:flex;flex-direction:column;padding:12px 16px 6px;flex-shrink:0;}
 .header-row{display:flex;align-items:center;justify-content:space-between;width:100%;gap:10px;}
-.header-right{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+/* [V16-superseded] .header-right{display:flex;align-items:center;gap:10px;flex-… */
 /* Title block sits inline right of date widget */
-.header-title-block{display:flex;flex-direction:column;align-items:flex-end;}
+/* [V16-superseded] .header-title-block{display:flex;flex-direction:column;align… */
 
 /* Date widget — now TOP-LEFT (V10) */
-.date-widget{background:var(--rose);border-radius:var(--r-lg);padding:6px 12px 8px;display:flex;flex-direction:column;justify-content:center;gap:1px;flex-shrink:0;user-select:none;box-shadow:4px 4px 0px 0px #7a8c8a,8px 8px 0px 0px rgba(107,124,122,0.55),0 4px 12px rgba(0,0,0,0.18);color:white;text-align:left;}
-.date-widget-date{font-size:9px;font-weight:500;color:rgba(255,255,255,0.75);letter-spacing:0.3px;line-height:1;white-space:nowrap;}
-.date-widget-day{font-family:var(--font-display);font-size:15px;font-weight:700;font-style:italic;color:white;line-height:1.1;letter-spacing:-0.3px;white-space:nowrap;}
+/* [V16-superseded] .date-widget{background:var(--rose);border-radius:var(--r-lg… */
+/* [V16-superseded] .date-widget-date{font-size:9px;font-weight:500;color:rgba(2… */
+/* [V16-superseded] .date-widget-day{font-family:var(--font-display);font-size:1… */
 
 /* ── THEME TOGGLE ── */
 .toggle-track{width:58px;height:30px;background:rgba(30,30,30,0.50);border-radius:var(--r-full);border:1.5px solid rgba(255,255,255,0.14);cursor:pointer;position:relative;transition:background var(--dur-med) var(--ease-std);}
@@ -79,20 +79,20 @@ body{background:var(--sage);color:#fff;font-family:var(--font-body);font-size:14
 .toggle-track.on .toggle-knob{transform:translateX(28px);}
 
 /* ── TITLE (V10 — right-aligned inline, compact) ── */
-.app-title{font-family:var(--font-display);font-size:38px;font-weight:700;font-style:italic;color:white;letter-spacing:-1.2px;line-height:1;text-align:right;}
-.app-subtitle{font-size:10px;font-weight:400;color:rgba(255,255,255,0.55);text-align:right;margin-top:1px;letter-spacing:0.4px;text-transform:uppercase;}
+/* [V16-superseded] .app-title{font-family:var(--font-display);font-size:38px;fo… */
+/* [V16-superseded] .app-subtitle{font-size:10px;font-weight:400;color:rgba(255,… */
 
 /* ── BURGER — removed from header, now lives in canvas-toolbar ── */
 
 /* ── CANVAS TOOLBAR (V10) ── */
 /* Sits inside grid-layer as the first row, just above cards. */
-.canvas-toolbar{display:flex;align-items:center;gap:8px;padding:4px 0 10px;}
-.canvas-toolbar-btn{width:34px;height:34px;background:var(--rose);border:none;border-radius:var(--r-md);color:white;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-sm);flex-shrink:0;transition:background var(--dur-fast),transform var(--dur-fast) var(--ease-spring);}
-.canvas-toolbar-btn:active{background:var(--rose-dark);transform:scale(0.92);}
-.canvas-toolbar-btn svg{width:16px;height:16px;stroke:white;fill:none;stroke-width:2.3;stroke-linecap:round;stroke-linejoin:round;}
-.canvas-search-btn{background:rgba(255,255,255,0.14);backdrop-filter:blur(4px);}
-.canvas-search-btn:active{background:rgba(255,255,255,0.22);transform:scale(0.92);}
-.canvas-item-count{flex:1;text-align:center;font-size:11px;font-weight:500;color:rgba(255,255,255,0.36);font-family:var(--font-body);letter-spacing:0.2px;pointer-events:none;}
+/* [V16-superseded] .canvas-toolbar{display:flex;align-items:center;gap:8px;padd… */
+/* [V16-superseded] .canvas-toolbar-btn{width:34px;height:34px;background:var(--… */
+/* [V16-superseded] .canvas-toolbar-btn:active{background:var(--rose-dark);trans… */
+/* [V16-superseded] .canvas-toolbar-btn svg{width:16px;height:16px;stroke:white;… */
+/* [V16-superseded] .canvas-search-btn{background:rgba(255,255,255,0.14);backdro… */
+/* [V16-superseded] .canvas-search-btn:active{background:rgba(255,255,255,0.22);… */
+/* [V16-superseded] .canvas-item-count{flex:1;text-align:center;font-size:11px;f… */
 
 /* ── CANVAS ── */
 .canvas{flex:1;position:relative;overflow:hidden;min-height:0;}
@@ -100,7 +100,7 @@ body{background:var(--sage);color:#fff;font-family:var(--font-body);font-size:14
 .grid-layer{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;padding:4px 12px 24px;-webkit-overflow-scrolling:touch;}
 
 /* ── CARD GRID ── */
-.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;align-content:start;}
+/* [V16-superseded] .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1… */
 
 /* ── LIST VIEW (V9) ── */
 .list-grid{display:flex;flex-direction:column;gap:8px;align-content:start;}
@@ -181,14 +181,14 @@ body{background:var(--sage);color:#fff;font-family:var(--font-body);font-size:14
 .add-menu-item svg{width:17px;height:17px;stroke:var(--rose);fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;}
 
 /* ── BOTTOM NAV ── */
-.bottom-nav{display:flex;align-items:center;justify-content:space-around;padding:8px 16px 22px;background:var(--sage-deeper);border-top:1.5px solid rgba(255,255,255,0.13);flex-shrink:0;position:relative;z-index:200;}
-.nav-btn{width:48px;height:48px;background:none;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:var(--r-md);color:rgba(255,255,255,0.52);transition:color var(--dur-fast),background var(--dur-fast),transform 350ms var(--ease-spring);}
-.nav-btn:active{transform:scale(0.88);background:rgba(255,255,255,0.08);}
-.nav-btn.active{color:white;}
-.nav-btn svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;}
-.nav-btn-fab{width:52px;height:52px;background:var(--rose);border:none;border-radius:var(--r-xl);cursor:pointer;display:flex;align-items:center;justify-content:center;color:white;margin-top:-10px;box-shadow:3px 3px 0px var(--rose-dark),var(--shadow-md);transition:transform 350ms var(--ease-spring),background var(--dur-fast),box-shadow var(--dur-fast);}
-.nav-btn-fab:active{transform:scale(0.88) translate(2px,2px);background:var(--rose-dark);box-shadow:1px 1px 0px var(--rose-dark),var(--shadow-sm);}
-.nav-btn-fab svg{width:24px;height:24px;stroke:white;fill:none;stroke-width:2.4;stroke-linecap:round;}
+/* [V16-superseded] .bottom-nav{display:flex;align-items:center;justify-content:… */
+/* [V16-superseded] .nav-btn{width:48px;height:48px;background:none;border:none;… */
+/* [V16-superseded] .nav-btn:active{transform:scale(0.88);background:rgba(255,25… */
+/* [V16-superseded] .nav-btn.active{color:white;}… */
+/* [V16-superseded] .nav-btn svg{width:24px;height:24px;stroke:currentColor;fill… */
+/* [V16-superseded] .nav-btn-fab{width:52px;height:52px;background:var(--rose);b… */
+/* [V16-superseded] .nav-btn-fab:active{transform:scale(0.88) translate(2px,2px)… */
+/* [V16-superseded] .nav-btn-fab svg{width:24px;height:24px;stroke:white;fill:no… */
 
 /* ── DRAWER ── */
 .drawer-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.42);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);z-index:600;animation:fade-in var(--dur-med) ease both;}
@@ -380,33 +380,33 @@ body{background:var(--sage);color:#fff;font-family:var(--font-body);font-size:14
    CODE EDITOR
    ============================================================ */
 .code-editor-page{background:#1a1d1c;color:#d4d4d4;}
-.code-topbar{background:#111413;border-bottom:1px solid rgba(255,255,255,0.06);}
-.code-filename-input{flex:1;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.10);border-radius:var(--r-sm);padding:6px 12px;color:rgba(255,255,255,0.90);font-size:13px;font-family:var(--font-mono);outline:none;user-select:text;-webkit-user-select:text;transition:border-color var(--dur-fast);}
-.code-filename-input:focus{border-color:rgba(182,141,147,0.55);}
-.code-filename-input::placeholder{color:rgba(255,255,255,0.28);}
-.code-lang-strip{display:flex;gap:6px;padding:8px 14px;background:#111413;border-bottom:1px solid rgba(255,255,255,0.06);overflow-x:auto;flex-shrink:0;scrollbar-width:none;}
-.code-lang-strip::-webkit-scrollbar{display:none;}
-.lang-tag{padding:4px 10px;border-radius:var(--r-full);background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.10);color:rgba(255,255,255,0.50);font-size:10px;font-weight:500;font-family:var(--font-mono);cursor:pointer;white-space:nowrap;transition:background var(--dur-fast),color var(--dur-fast),border-color var(--dur-fast);flex-shrink:0;}
-.lang-tag:active{background:rgba(182,141,147,0.20);}
-.lang-tag.active{background:rgba(182,141,147,0.22);border-color:rgba(182,141,147,0.55);color:var(--rose-light);font-weight:700;}
-.code-editor-frame{flex:1;display:flex;overflow:hidden;min-height:0;position:relative;}
-.code-gutter{width:42px;overflow:hidden;flex-shrink:0;background:#141716;border-right:1px solid rgba(255,255,255,0.06);padding:12px 0;font-family:var(--font-mono);font-size:12px;line-height:1.6;color:rgba(255,255,255,0.22);text-align:right;padding-right:8px;user-select:none;-webkit-user-select:none;}
-.code-gutter > div{height:19.2px;display:block;white-space:nowrap;}
-.code-highlight-wrap{position:relative;flex:1;overflow:hidden;}
-.code-highlight{position:absolute;inset:0;margin:0;padding:12px 14px;font-family:var(--font-mono);font-size:12px;line-height:1.6;white-space:pre;overflow-wrap:normal;overflow:auto;pointer-events:none;background:transparent;color:transparent;}
-.code-textarea--transparent{position:relative;z-index:1;background:transparent !important;color:transparent;caret-color:#d4d4d4;}
+/* [V16-superseded] .code-topbar{background:#111413;border-bottom:1px solid rgba… */
+/* [V16-superseded] .code-filename-input{flex:1;background:rgba(255,255,255,0.06… */
+/* [V16-superseded] .code-filename-input:focus{border-color:rgba(182,141,147,0.5… */
+/* [V16-superseded] .code-filename-input::placeholder{color:rgba(255,255,255,0.2… */
+/* [V16-superseded] .code-lang-strip{display:flex;gap:6px;padding:8px 14px;backg… */
+/* [V16-superseded] .code-lang-strip::-webkit-scrollbar{display:none;}… */
+/* [V16-superseded] .lang-tag{padding:4px 10px;border-radius:var(--r-full);backg… */
+/* [V16-superseded] .lang-tag:active{background:rgba(182,141,147,0.20);}… */
+/* [V16-superseded] .lang-tag.active{background:rgba(182,141,147,0.22);border-co… */
+/* [V16-superseded] .code-editor-frame{flex:1;display:flex;overflow:hidden;min-h… */
+/* [V16-superseded] .code-gutter{width:42px;overflow:hidden;flex-shrink:0;backgr… */
+/* [V16-superseded] .code-gutter > div{height:19.2px;display:block;white-space:n… */
+/* [V16-superseded] .code-highlight-wrap{position:relative;flex:1;overflow:hidde… */
+/* [V16-superseded] .code-highlight{position:absolute;inset:0;margin:0;padding:1… */
+/* [V16-superseded] .code-textarea--transparent{position:relative;z-index:1;back… */
 /* Token colours (VS Code Dark+ palette) */
 .sh-comment{color:#6a9955;}.sh-string{color:#ce9178;}.sh-keyword{color:#569cd6;font-weight:600;}
 .sh-number{color:#b5cea8;}.sh-fn{color:#dcdcaa;}.sh-tag{color:#4ec9b0;}.sh-attr{color:#9cdcfe;}
 .sh-builtin{color:#4fc1ff;}.sh-type{color:#4ec9b0;}.sh-decor{color:#c586c0;}.sh-prop{color:#9cdcfe;}.sh-bool{color:#569cd6;}
-.code-textarea{flex:1;background:#1a1d1c;border:none;padding:12px 14px;color:#d4d4d4;font-family:var(--font-mono);font-size:12px;line-height:1.6;resize:none;outline:none;overflow-y:auto;tab-size:2;white-space:pre;overflow-wrap:normal;overflow-x:auto;user-select:text;-webkit-user-select:text;caret-color:var(--rose);}
-.code-textarea::placeholder{color:rgba(255,255,255,0.18);}
-.code-statusbar{display:flex;align-items:center;gap:12px;padding:6px 14px;background:#111413;border-top:1px solid rgba(255,255,255,0.06);flex-shrink:0;}
-.code-status-lang{font-family:var(--font-mono);font-size:11px;color:var(--rose-light);font-weight:600;flex-shrink:0;}
-.code-status-pos{font-family:var(--font-mono);font-size:11px;color:rgba(255,255,255,0.35);flex:1;}
-.code-copy-btn{display:flex;align-items:center;gap:5px;padding:4px 12px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.10);border-radius:var(--r-full);color:rgba(255,255,255,0.60);font-size:11px;font-family:var(--font-body);cursor:pointer;flex-shrink:0;transition:background var(--dur-fast),color var(--dur-fast);}
-.code-copy-btn:active{background:rgba(182,141,147,0.20);color:white;}
-.code-copy-btn svg{stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+/* [V16-superseded] .code-textarea{flex:1;background:#1a1d1c;border:none;padding… */
+/* [V16-superseded] .code-textarea::placeholder{color:rgba(255,255,255,0.18);}… */
+/* [V16-superseded] .code-statusbar{display:flex;align-items:center;gap:12px;pad… */
+/* [V16-superseded] .code-status-lang{font-family:var(--font-mono);font-size:11p… */
+/* [V16-superseded] .code-status-pos{font-family:var(--font-mono);font-size:11px… */
+/* [V16-superseded] .code-copy-btn{display:flex;align-items:center;gap:5px;paddi… */
+/* [V16-superseded] .code-copy-btn:active{background:rgba(182,141,147,0.20);colo… */
+/* [V16-superseded] .code-copy-btn svg{stroke:currentColor;fill:none;stroke-widt… */
 
 /* ── REDUCED MOTION ── */
 @media (prefers-reduced-motion:reduce){
@@ -1266,3 +1266,831 @@ body{background:var(--sage);color:#fff;font-family:var(--font-body);font-size:14
 }
 .code-find-close:hover { color: white; }
 .code-find-close:focus-visible { outline: 2px solid var(--rose); outline-offset: 2px; }
+
+/* ================================================================
+   V16 — VISUAL EVOLUTION
+   Header · Glass Cards · Masonry · Dock Nav · Empty State · PTR
+   ================================================================ */
+
+/* ── V16 HEADER: elegant, balanced, not top-heavy ── */
+
+.app-header {
+  padding: 14px 16px 0;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+/* Date pill — clean, no heavy box */
+.date-pill {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: var(--r-full);
+  background: rgba(255,255,255,0.10);
+  border: 1px solid rgba(255,255,255,0.12);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  user-select: none;
+  flex-shrink: 0;
+}
+.date-pill-day {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-style: italic;
+  font-weight: 700;
+  color: white;
+  letter-spacing: -0.2px;
+}
+.date-pill-sep {
+  font-size: 10px;
+  color: rgba(255,255,255,0.35);
+}
+.date-pill-date {
+  font-size: 10px;
+  color: rgba(255,255,255,0.60);
+  font-weight: 500;
+  letter-spacing: 0.1px;
+}
+
+/* Title — centred and prominent */
+.app-title {
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 700;
+  font-style: italic;
+  color: white;
+  letter-spacing: -1px;
+  line-height: 1;
+  text-align: center;
+  flex: 1;
+}
+
+/* Right cluster: toggle + compact menu icon */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Compact header icon button */
+.hdr-icon-btn {
+  width: 34px;
+  height: 34px;
+  background: rgba(255,255,255,0.10);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: var(--r-md);
+  color: rgba(255,255,255,0.80);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--dur-fast);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+.hdr-icon-btn:active { background: rgba(255,255,255,0.18); }
+.hdr-icon-btn svg {
+  width: 16px; height: 16px;
+  stroke: currentColor; fill: none;
+  stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+}
+.hdr-icon-btn:focus-visible { outline: 2px solid var(--rose); outline-offset: 2px; }
+
+/* Collapsible search pill row */
+.header-search-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 10px;
+}
+
+.search-pill {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  background: rgba(0,0,0,0.18);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: var(--r-full);
+  color: rgba(255,255,255,0.40);
+  font-size: 13px;
+  font-family: var(--font-body);
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--dur-fast), border-color var(--dur-fast), color var(--dur-fast);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+.search-pill:hover {
+  background: rgba(0,0,0,0.28);
+  border-color: rgba(255,255,255,0.16);
+  color: rgba(255,255,255,0.60);
+}
+.search-pill:active { background: rgba(182,141,147,0.15); }
+.search-pill svg {
+  stroke: currentColor; fill: none;
+  stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round;
+  flex-shrink: 0;
+  opacity: 0.55;
+}
+.search-pill span { flex: 1; }
+.search-pill:focus-visible { outline: 2px solid var(--rose); outline-offset: 2px; }
+
+.search-kbd {
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: rgba(255,255,255,0.25);
+  background: rgba(255,255,255,0.07);
+  padding: 2px 6px;
+  border-radius: 5px;
+  border: 1px solid rgba(255,255,255,0.10);
+  flex-shrink: 0;
+}
+@media (max-width: 480px) { .search-kbd { display: none; } }
+
+/* ── V16 GLASS CARDS ── */
+
+/* Override original solid card background with glass */
+.glass-card {
+  background: rgba(62,62,62,0.55) !important;
+  backdrop-filter: blur(14px) saturate(1.3);
+  -webkit-backdrop-filter: blur(14px) saturate(1.3);
+  border: 1px solid rgba(255,255,255,0.11) !important;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.06) !important;
+}
+.glass-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, transparent 55%);
+  pointer-events: none;
+}
+[data-theme="dark"] .glass-card {
+  background: rgba(30,32,30,0.60) !important;
+}
+.glass-card:active {
+  background: rgba(182,141,147,0.18) !important;
+}
+
+/* Note content: sans-serif (readable) */
+.card-content {
+  color: rgba(255,255,255,0.62);
+  font-size: 11px;
+  font-family: var(--font-body);  /* ← was font-mono globally; now only code uses mono */
+  line-height: 1.65;
+  flex: 1;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 9;
+  -webkit-box-orient: vertical;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+/* Code cards keep monospace */
+.card-content--mono {
+  font-family: var(--font-mono) !important;
+  font-size: 10px !important;
+}
+
+/* Visual teasers */
+.card-teasers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding-top: 4px;
+}
+.card-teaser {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 6px;
+  border-radius: var(--r-full);
+  font-size: 9px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.card-teaser svg {
+  stroke: currentColor; fill: none;
+  stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+}
+.card-teaser--link {
+  background: rgba(77,150,255,0.14);
+  border: 1px solid rgba(77,150,255,0.28);
+  color: rgba(150,200,255,0.85);
+}
+.card-teaser--lang {
+  background: rgba(182,141,147,0.16);
+  border: 1px solid rgba(182,141,147,0.30);
+  color: var(--rose-light);
+  font-family: var(--font-mono);
+}
+
+/* ── MASONRY GRID ── */
+
+.masonry-grid {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 4px 0 32px;
+}
+
+.masonry-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.masonry-card {
+  min-height: unset !important;  /* masonry heights are natural */
+}
+
+/* List view still works */
+.list-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px 0 32px;
+}
+.list-grid .card-content { -webkit-line-clamp: 2; }
+.list-grid .card-tags    { display: none; }
+.list-grid .card-meta    { margin-top: 0; padding-top: 0; border-top: none; }
+
+/* ── V16 EMPTY STATE — illustration + quote ── */
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px 64px;
+  text-align: center;
+  gap: 12px;
+  animation: fade-in var(--dur-med) ease both;
+  /* span all masonry columns */
+  width: 100%;
+}
+
+.empty-illustration {
+  width: 120px;
+  height: 100px;
+  opacity: 0.85;
+  animation: float 4s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0);   }
+  50%       { transform: translateY(-6px); }
+}
+
+.empty-title {
+  font-size: 17px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.62);
+}
+
+.empty-quote {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 14px;
+  color: rgba(255,255,255,0.38);
+  max-width: 240px;
+  line-height: 1.55;
+}
+
+.empty-hint {
+  font-size: 12px;
+  color: rgba(255,255,255,0.32);
+  line-height: 1.5;
+  margin-top: 2px;
+}
+.empty-hint strong { color: rgba(255,255,255,0.52); }
+
+/* ── V16 DOCK-STYLE BOTTOM NAV ── */
+
+.bottom-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 10px 12px 26px;
+  /* Floating dock effect */
+  background: rgba(35,40,38,0.72);
+  backdrop-filter: blur(20px) saturate(1.6);
+  -webkit-backdrop-filter: blur(20px) saturate(1.6);
+  border-top: 1px solid rgba(255,255,255,0.10);
+  box-shadow: 0 -4px 24px rgba(0,0,0,0.28), 0 -1px 0 rgba(255,255,255,0.06);
+  flex-shrink: 0;
+  position: relative;
+  z-index: 200;
+}
+
+/* Nav buttons with label */
+.nav-btn {
+  width: auto;
+  min-width: 48px;
+  height: auto;
+  padding: 6px 10px 4px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  border-radius: var(--r-lg);
+  color: rgba(255,255,255,0.40);
+  transition: color var(--dur-fast), background var(--dur-fast), transform 350ms var(--ease-spring);
+}
+.nav-btn:active  { transform: scale(0.88); background: rgba(255,255,255,0.07); }
+
+/* Active state: mauve colour glow */
+.nav-btn.active  { color: var(--rose-light); }
+.nav-btn.active svg { filter: drop-shadow(0 0 6px rgba(182,141,147,0.55)); }
+
+.nav-btn svg {
+  width: 22px; height: 22px;
+  stroke: currentColor; fill: none;
+  stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
+  transition: filter var(--dur-fast);
+}
+
+.nav-btn-label {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  color: inherit;
+  user-select: none;
+}
+.nav-btn.active .nav-btn-label { color: var(--rose-light); }
+
+/* Settings button — same pattern but no data-tab */
+#settings-btn { color: rgba(255,255,255,0.40); }
+#settings-btn .nav-btn-label { color: inherit; }
+
+/* FAB — mauve glow */
+.nav-btn-fab {
+  width: 52px;
+  height: 52px;
+  background: var(--rose);
+  border: none;
+  border-radius: var(--r-xl);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  margin-top: -14px;
+  /* Glowing shadow instead of muddy offset */
+  box-shadow:
+    0 0 0 3px rgba(182,141,147,0.20),
+    0 0 20px rgba(182,141,147,0.55),
+    0 4px 16px rgba(0,0,0,0.35);
+  transition: transform 350ms var(--ease-spring), background var(--dur-fast), box-shadow var(--dur-fast);
+}
+.nav-btn-fab:active {
+  transform: scale(0.88);
+  background: var(--rose-dark);
+  box-shadow:
+    0 0 0 2px rgba(182,141,147,0.15),
+    0 0 10px rgba(182,141,147,0.35),
+    0 2px 8px rgba(0,0,0,0.30);
+}
+.nav-btn-fab svg {
+  width: 24px; height: 24px;
+  stroke: white; fill: none;
+  stroke-width: 2.4; stroke-linecap: round;
+}
+
+/* ── PULL-TO-REFRESH ── */
+
+.ptr-indicator {
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 6px;
+  overflow: hidden;
+  transition: height 80ms ease;
+}
+
+.ptr-logo {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-style: italic;
+  font-weight: 700;
+  color: rgba(255,255,255,0.45);
+  letter-spacing: -0.3px;
+  transform-origin: center;
+  transition: color 200ms ease, transform 200ms var(--ease-spring);
+}
+
+.ptr-logo.ptr-ready {
+  color: var(--rose-light);
+  transform: scale(1.12);
+}
+
+@keyframes ptr-pulse-spin {
+  0%   { transform: scale(1) rotate(0deg);   color: var(--rose-light); }
+  25%  { transform: scale(1.2) rotate(90deg); }
+  50%  { transform: scale(1) rotate(180deg); color: white; }
+  75%  { transform: scale(1.15) rotate(270deg); }
+  100% { transform: scale(1) rotate(360deg); color: var(--rose-light); }
+}
+
+.ptr-logo.ptr-spin {
+  animation: ptr-pulse-spin 600ms var(--ease-spring) both;
+}
+
+/* ── GRID LAYER padding update ── */
+/* Remove old canvas-toolbar top padding since toolbar is gone */
+.grid-layer {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 6px 12px 24px;
+  -webkit-overflow-scrolling: touch;
+}
+
+
+/* ================================================================
+   V16 — CODE EDITOR IDE OVERHAUL
+   Unified scroll · Glass topbar · Language slider · Active line ·
+   JetBrains Mono · Floating actions · Mauve accent throughout
+   ================================================================ */
+
+/* ── JetBrains Mono font (imported in app.html head via @import) ── */
+/* Fallback chain: JetBrains Mono → Fira Code → Consolas → monospace */
+:root {
+  --ce-font:        'JetBrains Mono', 'Fira Code', 'Consolas', 'Courier New', monospace;
+  --ce-font-size:   13.5px;
+  --ce-line-height: 22px;   /* MUST match LINE_H constant in code-editor.js */
+  --ce-gutter-w:    48px;
+  --ce-pad-h:       16px;   /* horizontal padding in code area */
+  --ce-bg:          #16191a;
+  --ce-gutter-bg:   #1c2022; /* slightly lighter = "spine" */
+  --ce-text:        #d4d4d4;
+  --ce-active-line: rgba(182,141,147,0.07);
+  --ce-selection:   rgba(182,141,147,0.28);
+}
+
+/* ── Page shell ── */
+.code-editor-page {
+  background: var(--ce-bg) !important;
+  color: var(--ce-text);
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── TOPBAR — glass, no hard border ── */
+.ce-topbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px 10px;
+  flex-shrink: 0;
+  /* Glass effect: code scrolls under here, feels layered */
+  background: rgba(22,25,26,0.82);
+  backdrop-filter: blur(18px) saturate(1.2);
+  -webkit-backdrop-filter: blur(18px) saturate(1.2);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.ce-back {
+  width: 36px; height: 36px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.09);
+  border-radius: var(--r-md);
+  color: rgba(255,255,255,0.70);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  transition: background var(--dur-fast);
+}
+.ce-back:active { background: rgba(255,255,255,0.12); }
+.ce-back svg {
+  width: 18px; height: 18px;
+  stroke: currentColor; fill: none;
+  stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round;
+}
+.ce-back:focus-visible { outline: 2px solid var(--rose); outline-offset: 2px; }
+
+/* Filename input — borderless, heavyweight anchor */
+.ce-filename {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: rgba(255,255,255,0.92);
+  font-family: var(--ce-font);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+  outline: none;
+  user-select: text;
+  -webkit-user-select: text;
+  caret-color: var(--rose);
+}
+.ce-filename::placeholder {
+  color: rgba(255,255,255,0.22);
+  font-weight: 400;
+}
+
+/* ── LANGUAGE TRACK — borderless, slider underline ── */
+.ce-lang-track {
+  display: flex;
+  gap: 0;
+  padding: 0 8px;
+  overflow-x: auto;
+  flex-shrink: 0;
+  scrollbar-width: none;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  background: #14171a;
+  position: relative;   /* for slider */
+}
+.ce-lang-track::-webkit-scrollbar { display: none; }
+
+.ce-lang-btn {
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.34);
+  font-family: var(--ce-font);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+  transition: color var(--dur-fast);
+}
+.ce-lang-btn:hover  { color: rgba(255,255,255,0.65); }
+.ce-lang-btn.active { color: var(--rose-light); font-weight: 700; }
+.ce-lang-btn:focus-visible { outline: 2px solid var(--rose); outline-offset: -2px; border-radius: 4px; }
+
+/* The animated slider underline */
+.ce-lang-slider {
+  position: absolute;
+  bottom: 0;
+  height: 2px;
+  background: var(--rose);
+  border-radius: 2px 2px 0 0;
+  box-shadow: 0 0 8px rgba(182,141,147,0.6);
+  transition: left 220ms var(--ease-spring), width 220ms var(--ease-spring);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── UNIFIED SCROLL CONTAINER ── */
+/*
+ * This is the single element that owns the scrollbar.
+ * Everything inside is position:static and grows with content.
+ * The old model (textarea scrolls independently) is gone.
+ */
+.ce-scroll {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: auto;
+  position: relative;
+  -webkit-overflow-scrolling: touch;
+  /* Scrollbar matches brand */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(182,141,147,0.28) transparent;
+}
+.ce-scroll::-webkit-scrollbar       { width: 4px; height: 4px; }
+.ce-scroll::-webkit-scrollbar-thumb { background: rgba(182,141,147,0.30); border-radius: 4px; }
+
+/* Inner: flex row — gutter on left, code area on right */
+.ce-inner {
+  display: flex;
+  min-width: 100%;
+  /* min-height set by JS sizeCanvas() */
+}
+
+/* ── GUTTER "SPINE" ── */
+.ce-gutter {
+  width: var(--ce-gutter-w);
+  flex-shrink: 0;
+  background: var(--ce-gutter-bg);
+  /* No border — the background difference is the divider */
+  padding: var(--ce-pad-h) 0;
+  position: sticky;
+  left: 0;          /* stays in view during horizontal scroll */
+  z-index: 2;
+}
+
+.ce-gutter-num {
+  height: var(--ce-line-height);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 10px;
+  font-family: var(--ce-font);
+  font-size: 11px;
+  color: rgba(255,255,255,0.18);
+  user-select: none;
+  -webkit-user-select: none;
+  transition: color var(--dur-fast);
+  line-height: 1; /* height controlled by parent */
+}
+/* Active gutter number: mauve */
+.ce-gutter-num.active {
+  color: var(--rose);
+  font-weight: 700;
+}
+
+/* ── CODE AREA (right of gutter) ── */
+.ce-code-area {
+  flex: 1;
+  position: relative;
+  min-width: 0;
+}
+
+/* ── ACTIVE LINE HIGHLIGHT ── */
+.ce-active-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: var(--ce-pad-h);
+  height: var(--ce-line-height);
+  background: var(--ce-active-line);
+  pointer-events: none;
+  z-index: 1;
+  transition: transform 60ms linear, opacity 150ms ease;
+  opacity: 0;
+  border-radius: 2px;
+}
+
+/* ── SYNTAX HIGHLIGHT MIRROR ── */
+.ce-highlight {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: var(--ce-pad-h) var(--ce-pad-h) var(--ce-pad-h) 14px;
+  font-family: var(--ce-font);
+  font-size: var(--ce-font-size);
+  line-height: var(--ce-line-height);
+  white-space: pre;
+  overflow-wrap: normal;
+  overflow: visible;  /* parent scroll handles overflow */
+  pointer-events: none;
+  color: transparent; /* tokens provide colour */
+  background: transparent;
+  z-index: 2;
+  /* Tab size matches textarea */
+  tab-size: 2;
+  -moz-tab-size: 2;
+}
+
+/* ── TEXTAREA — transparent overlay over highlight ── */
+.ce-textarea {
+  position: absolute;
+  inset: 0;
+  padding: var(--ce-pad-h) var(--ce-pad-h) var(--ce-pad-h) 14px;
+  font-family: var(--ce-font);
+  font-size: var(--ce-font-size);
+  line-height: var(--ce-line-height);
+  background: transparent;
+  color: transparent;          /* highlight shows through */
+  caret-color: var(--rose);    /* mauve cursor */
+  border: none;
+  resize: none;
+  outline: none;
+  overflow: hidden;            /* scroll handled by parent */
+  white-space: pre;
+  tab-size: 2;
+  -moz-tab-size: 2;
+  user-select: text;
+  -webkit-user-select: text;
+  z-index: 3;
+  /* Mauve selection */
+  accent-color: var(--rose);
+}
+/* Selection colour via ::selection */
+.ce-textarea::selection {
+  background: var(--ce-selection);
+  color: transparent; /* keep text invisible, highlight shows */
+}
+/* Ghost placeholder: comment-green, dim */
+.ce-textarea::placeholder {
+  color: #4a6a4a;
+  font-style: italic;
+}
+
+/* Token colours — VS Code Dark+ palette (unchanged from V15) */
+.sh-comment { color: #6a9955; }
+.sh-string  { color: #ce9178; }
+.sh-keyword { color: #569cd6; font-weight: 600; }
+.sh-number  { color: #b5cea8; }
+.sh-fn      { color: #dcdcaa; }
+.sh-tag     { color: #4ec9b0; }
+.sh-attr    { color: #9cdcfe; }
+.sh-builtin { color: #4fc1ff; }
+.sh-type    { color: #4ec9b0; }
+.sh-decor   { color: #c586c0; }
+.sh-prop    { color: #9cdcfe; }
+.sh-bool    { color: #569cd6; }
+
+/* ── FLOATING ACTION ICONS ── */
+.ce-float-actions {
+  position: sticky;
+  top: 8px;
+  float: right;
+  margin-right: 10px;
+  margin-top: -36px; /* pull up to top-right of code area */
+  display: flex;
+  gap: 4px;
+  z-index: 10;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 220ms ease;
+}
+.ce-float-actions.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.ce-float-btn {
+  width: 30px; height: 30px;
+  background: rgba(22,25,26,0.75);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: var(--r-md);
+  color: rgba(255,255,255,0.55);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background var(--dur-fast), color var(--dur-fast), transform var(--dur-fast);
+}
+.ce-float-btn:active {
+  background: rgba(182,141,147,0.22);
+  color: white;
+  transform: scale(0.90);
+}
+.ce-float-btn:focus-visible { outline: 2px solid var(--rose); outline-offset: 2px; }
+.ce-float-btn svg {
+  width: 13px; height: 13px;
+  stroke: currentColor; fill: none;
+  stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
+}
+
+/* ── STATUS BAR ── */
+.ce-statusbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 5px 14px 6px;
+  background: #111415;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  flex-shrink: 0;
+}
+.ce-status-lang {
+  font-family: var(--ce-font);
+  font-size: 10px;
+  color: var(--rose-light);
+  font-weight: 700;
+  flex-shrink: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.ce-status-pos {
+  font-family: var(--ce-font);
+  font-size: 10px;
+  color: rgba(255,255,255,0.30);
+  flex: 1;
+}
+
+/* ── Preserve find/replace bar styles (unchanged from V15) ── */
+/* (already in styles.css from V15 block — no duplicate needed) */
+
+/* ── Hide old code editor classes that are now replaced ── */
+/* These selectors target the old structure; the new .ce-* classes take over */
+.code-editor-page .code-topbar,
+.code-editor-page .code-lang-strip,
+.code-editor-page .code-editor-frame,
+.code-editor-page .code-gutter,
+.code-editor-page .code-highlight-wrap,
+.code-editor-page .code-highlight,
+.code-editor-page .code-textarea,
+.code-editor-page .code-statusbar,
+.code-editor-page .code-copy-btn {
+  display: none !important;
+}
